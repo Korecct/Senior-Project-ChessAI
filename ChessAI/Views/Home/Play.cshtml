@@ -1,0 +1,54 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Board</title>
+    <style>
+        .chess-board-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 70px);
+            grid-template-rows: repeat(8, 70px);
+            gap: 0;
+            border: 2px solid #000;
+        }
+
+        .chess-square {
+            width: 70px;
+            height: 70px;
+        }
+
+        .black {
+            background-color: #000;
+        }
+
+        .white {
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="chess-board-container">
+        <div class="chess-board">
+            @for (int row = 0; row < 8; row++)
+            {
+                @for (int col = 0; col < 8; col++)
+                {
+                    var isBlack = (row + col) % 2 == 0;
+                    var className = isBlack ? "black" : "white";
+                    <div class="chess-square @className"></div>
+                }
+            }
+        </div>
+    </div>
+</body>
+</html>
+
+

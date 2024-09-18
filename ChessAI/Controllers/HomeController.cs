@@ -18,7 +18,11 @@ namespace ChessAI.Controllers
             return View();
         }
 
-        public IActionResult Privacy()
+        public IActionResult Rules()
+        {
+            return View();
+        }
+        public IActionResult Play()
         {
             return View();
         }
