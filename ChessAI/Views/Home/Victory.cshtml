@@ -1,53 +1,43 @@
 <!DOCTYPE html>
-<html lang = "en">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Victory Results</title>
     <style>
-        .play-again-buttton{
+        .play-again-button {
             display: inline-block;
             background-color: #217AFF;
             width: 303px;
             height: 119px;
             box-shadow: 0px 4px 4px 0px #000;
             font-size: 40px;
-            font-style: white;
-            }
-        .back-to-menu-button{
+            color: white; /* Corrected from font-style */
+            text-align: center;
+            line-height: 119px; /* Center text vertically */
+            text-decoration: none; /* Remove underline */
+        }
+
+        .back-to-menu-button {
             display: inline-block;
             background-color: #FF2121;
             width: 303px;
             height: 119px;
             box-shadow: 0px 4px 4px 0px #000;
             font-size: 40px;
-            font-style: white;
-            }
-        .exit-button{
-            display: inline-block;
-            background-color: #FF2121;
-            width: 303px;
-            height: 119px;
-            box-shadow: 0px 4px 4px 0px #000;
-            font-size: 40px;
-            font-style: #000;
-            }
+            color: white; /* Corrected from font-style */
+            text-align: center;
+            line-height: 119px; /* Center text vertically */
+            text-decoration: none; /* Remove underline */
+        }
     </style>
 </head>
 <body>
-    <h1{font-size: 85px} style="color: #000;"><center>VICTORY</center></h1>
-
+    <h1 style="font-size: 85px; color: #000;"><center>VICTORY</center></h1>
     <center>
-    <form action = "Play.cshtml">
-    <button type = "submit" class = "play-again-buttton" id = "play-again-buttton">Play Again</button>
-    </form>
-    
-    <form action = "Index.cshtml">
-    <button type = "submit" class = "back-to-menu-button" id = "back-to-menu-button">Back to Menu</button>
-    </form>
-
-    <!-- <form action = ""></form>
-    <button type = "button">EXIT</button> -->
+        <a class="play-again-button" asp-controller="Home" asp-action="Play">Play Again</a>
+        <a class="back-to-menu-button" asp-controller="Home" asp-action="Index">Return To Home</a>
     </center>
-
 </body>
+</html>
+

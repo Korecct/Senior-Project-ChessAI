@@ -26,6 +26,18 @@ namespace ChessAI.Controllers
         {
             return View();
         }
+        public IActionResult Victory()
+        {
+            return View();
+        }
+        public IActionResult Defeat()
+        {
+            return View();
+        }
+        public IActionResult Draw()
+        {
+            return View();
+        }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()

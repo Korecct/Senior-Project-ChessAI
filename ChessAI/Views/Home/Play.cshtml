@@ -10,6 +10,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            flex-direction: column; /* Added to stack items vertically */
         }
 
         .chess-board {
@@ -32,6 +33,21 @@
         .white {
             background-color: #fff;
         }
+
+        .navigate-button {
+            margin-top: 20px; /* Spacing above the button */
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+            .navigate-button:hover {
+                background-color: #0056b3;
+            }
     </style>
 </head>
 <body>
@@ -47,8 +63,9 @@
                 }
             }
         </div>
+        <a class="navigate-button" asp-controller="Home" asp-action="Victory">Go to Victory</a>
+        <a class="navigate-button2" asp-controller="Home" asp-action="Defeat">Go to Defeat</a>
+        <a class="navigate-button3" asp-controller="Home" asp-action="Draw">Go to Draw</a>
     </div>
 </body>
 </html>
-
-
