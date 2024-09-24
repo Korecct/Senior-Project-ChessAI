@@ -1,9 +1,11 @@
-﻿<!DOCTYPE html>
+﻿@model ChessAI.Models.Game
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Board</title>
+    <title>Chess Game</title>
     <style>
         .chess-board-container {
             display: flex;
@@ -14,25 +16,42 @@
         }
 
         .chess-board {
+            --board-size: 70vmin; /* Board size variable */
+            width: var(--board-size);
+            height: var(--board-size);
             display: grid;
-            grid-template-columns: repeat(8, 70px);
-            grid-template-rows: repeat(8, 70px);
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
             gap: 0;
             border: 2px solid #000;
         }
 
         .chess-square {
-            width: 70px;
-            height: 70px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-width: 0; /* Prevents the square from expanding */
+            min-height: 0; /* Prevents the square from expanding */
         }
 
         .black {
-            background-color: #000;
+            background-color: #769656;
         }
 
         .white {
-            background-color: #fff;
+            background-color: #eeeed2;
         }
+
+        .chess-piece {
+            font-size: calc((var(--board-size) / 8) * 0.7);
+            font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
+            cursor: grab;
+        }
+
+            .chess-piece:active {
+                cursor: grabbing;
+            }
 
         .navigate-button {
             margin-top: 20px; /* Spacing above the button */
@@ -45,12 +64,16 @@
             cursor: pointer;
         }
 
-            .navigate-button:hover {
-                background-color: #0056b3;
-            }
+        .navigate-button:hover {
+            background-color: #0056b3;
+        }
     </style>
+
+
 </head>
 <body>
+    <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
+
     <div class="chess-board-container">
         <div class="chess-board">
             @for (int row = 0; row < 8; row++)
@@ -59,13 +82,115 @@
                 {
                     var isBlack = (row + col) % 2 == 0;
                     var className = isBlack ? "black" : "white";
-                    <div class="chess-square @className"></div>
+                    var piece = Model.Board.Squares[row, col];
+                    var pieceSymbol = "";
+                    if (piece != null)
+                    {
+                        pieceSymbol = GetPieceSymbol(piece);
+                    }
+                    <div class="chess-square @className"
+                         data-row="@row" data-col="@col" data-drop-target="true"
+                         ondragover="allowDrop(event)" ondrop="drop(event)">
+                        @if (!string.IsNullOrEmpty(pieceSymbol))
+                        {
+                            <div class="chess-piece" draggable="true"
+                                 data-piece="@pieceSymbol" data-row="@row" data-col="@col"
+                                 data-piece-color="@(piece.IsWhite ? "white" : "black")"
+                                 ondragstart="dragStart(event)">
+                                @pieceSymbol
+                            </div>
+                        }
+                    </div>
                 }
             }
         </div>
+
         <a class="navigate-button" asp-controller="Home" asp-action="Victory">Go to Victory</a>
-        <a class="navigate-button2" asp-controller="Home" asp-action="Defeat">Go to Defeat</a>
-        <a class="navigate-button3" asp-controller="Home" asp-action="Draw">Go to Draw</a>
+        <a class="navigate-button" asp-controller="Home" asp-action="Defeat">Go to Defeat</a>
+        <a class="navigate-button" asp-controller="Home" asp-action="Draw">Go to Draw</a>
     </div>
+
+    <script>
+        let draggedPiece = null;
+
+        function dragStart(event) {
+            console.log('dragStart event fired');
+
+            const isWhiteTurn = @Model.IsWhiteTurn.ToString().ToLower();
+            const pieceColor = event.target.getAttribute('data-piece-color');
+
+            if ((isWhiteTurn === 'true' && pieceColor !== 'white') || (isWhiteTurn === 'false' && pieceColor !== 'black')) {
+                event.preventDefault(); // Prevent dragging opponent's pieces
+                return;
+            }
+
+            draggedPiece = event.target;
+            event.dataTransfer.setData('text/plain', '');
+        }
+
+        function allowDrop(event) {
+            event.preventDefault();
+            console.log('allowDrop event fired');
+        }
+
+        function drop(event) {
+            event.preventDefault();
+            console.log('drop event fired');
+
+            if (draggedPiece) {
+                const fromRow = parseInt(draggedPiece.getAttribute('data-row'));
+                const fromCol = parseInt(draggedPiece.getAttribute('data-col'));
+                const toRow = parseInt(event.target.getAttribute('data-row'));
+                const toCol = parseInt(event.target.getAttribute('data-col'));
+
+                postMove(fromRow, fromCol, toRow, toCol);
+            }
+        }
+
+        function postMove(fromRow, fromCol, toRow, toCol) {
+            fetch('/Home/MakeMove', {
+
+                method: 'POST',
+                headers: {
+
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
+
+                },
+                body: JSON.stringify({ fromRow, fromCol, toRow, toCol })
+            }).then(response => {
+                if (response.ok) {
+
+                    location.reload();
+
+                } else {
+                    response.text().then(text => alert('Invalid move: ' + text));
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while making the move.');
+            });
+        }
+    </script>
+
+    @functions {
+        private string GetPieceSymbol(Piece piece)
+        {
+            if (piece is Pawn)
+                return piece.IsWhite ? "♙" : "♟";
+            else if (piece is Rook)
+                return piece.IsWhite ? "♖" : "♜";
+            else if (piece is Knight)
+                return piece.IsWhite ? "♘" : "♞";
+            else if (piece is Bishop)
+                return piece.IsWhite ? "♗" : "♝";
+            else if (piece is Queen)
+                return piece.IsWhite ? "♕" : "♛";
+            else if (piece is King)
+                return piece.IsWhite ? "♔" : "♚";
+            else
+                return "";
+        }
+    }
 </body>
 </html>
