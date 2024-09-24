@@ -9,7 +9,6 @@ namespace ChessAI.Models
         public Board Board { get; set; } = new Board();
         public bool IsWhiteTurn { get; set; } = true;
 
-        
         public bool MakeMove((int Row, int Col) from, (int Row, int Col) to, ILogger logger)
         {
             var piece = Board.Squares[from.Row, from.Col];
@@ -26,15 +25,23 @@ namespace ChessAI.Models
             }
 
             var validMoves = piece.GetValidMoves(Board);
-
             logger.LogInformation($"Valid moves for piece at ({from.Row}, {from.Col}): {string.Join(", ", validMoves.Select(m => $"({m.Row}, {m.Col})"))}");
 
             if (validMoves.Any(m => m.Row == to.Row && m.Col == to.Col))
             {
-                // Move the piece
+                var originalPosition = piece.Position;
                 Board.Squares[to.Row, to.Col] = piece;
                 Board.Squares[from.Row, from.Col] = null;
                 piece.Position = to;
+
+                if (Board.isKingInCheck(IsWhiteTurn))
+                {
+                    Board.Squares[from.Row, from.Col] = piece;
+                    Board.Squares[to.Row, to.Col] = null;
+                    piece.Position = originalPosition;
+                    logger.LogInformation($"Move to ({to.Row}, {to.Col}) puts the king in check. Move aborted.");
+                    return false;
+                }
 
                 IsWhiteTurn = !IsWhiteTurn;
                 return true;
@@ -45,6 +52,5 @@ namespace ChessAI.Models
                 return false;
             }
         }
-
     }
 }

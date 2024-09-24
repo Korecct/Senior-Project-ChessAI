@@ -78,6 +78,38 @@
             }
             return false;
         }
+        public bool isKingInCheck(bool isWhite)
+        {
+            (int Row, int Col) kingPosition = findKingPosition(isWhite);
+            foreach (var piece in Squares)
+            {
+                if (piece != null && piece.IsWhite != isWhite)
+                {
+                    var validMoves = piece.GetValidMoves(this);
+                    if (validMoves.Any(m => m.Row == kingPosition.Row && m.Col == kingPosition.Col))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public (int Row, int Col) findKingPosition(bool isWhite)
+        {
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    if (Squares[row, col] is King king && king.IsWhite == isWhite)
+                    {
+                        return (row, col);
+                    }
+                }
+            }
+            throw new Exception("King not found!");
+        }
+
     }
 
 }
