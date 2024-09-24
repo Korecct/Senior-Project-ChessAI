@@ -15,35 +15,40 @@
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int direction = IsWhite ? -1 : 1;
-            int startRow = IsWhite ? 6 : 1;
+            int direction = IsWhite ? -1 : 1; // White moves up, black moves down
 
-            // Move forward
-            int newRow = Position.Row + direction;
-            if (board.IsEmpty(newRow, Position.Col))
+            int forwardRow = Position.Row + direction;
+
+            // Forward movement
+            if (board.IsWithinBounds(forwardRow, Position.Col) && board.IsEmpty(forwardRow, Position.Col))
             {
-                moves.Add((newRow, Position.Col));
+                moves.Add((forwardRow, Position.Col));
 
-                // Double move from starting position
-                if (Position.Row == startRow && board.IsEmpty(newRow + direction, Position.Col))
+                // First move can be two squares forward
+                if ((IsWhite && Position.Row == 6) || (!IsWhite && Position.Row == 1))
                 {
-                    moves.Add((newRow + direction, Position.Col));
+                    int doubleForwardRow = Position.Row + 2 * direction;
+                    if (board.IsEmpty(doubleForwardRow, Position.Col))
+                    {
+                        moves.Add((doubleForwardRow, Position.Col));
+                    }
                 }
             }
 
             // Captures
-            foreach (int colOffset in new[] { -1, 1 })
+            int[] captureCols = { Position.Col - 1, Position.Col + 1 };
+            foreach (int col in captureCols)
             {
-                int newCol = Position.Col + colOffset;
-                if (board.IsEnemyPiece(newRow, newCol, IsWhite))
+                if (board.IsWithinBounds(forwardRow, col) && board.IsEnemyPiece(forwardRow, col, IsWhite))
                 {
-                    moves.Add((newRow, newCol));
+                    moves.Add((forwardRow, col));
                 }
             }
 
             return moves;
         }
     }
+
 
     [Serializable]
     public class Rook : Piece
@@ -51,35 +56,46 @@
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int direction = IsWhite ? -1 : 1;
-            int startRow = IsWhite ? 6 : 1;
+            int[] rowDirections = { -1, 1, 0, 0 };
+            int[] colDirections = { 0, 0, -1, 1 };
 
-            // Move forward
-            int newRow = Position.Row + direction;
-            if (board.IsEmpty(newRow, Position.Col))
+            for (int dir = 0; dir < 4; dir++)
             {
-                moves.Add((newRow, Position.Col));
+                int rowDir = rowDirections[dir];
+                int colDir = colDirections[dir];
 
-                // Double move from starting position
-                if (Position.Row == startRow && board.IsEmpty(newRow + direction, Position.Col))
+                for (int i = 1; i < 8; i++)
                 {
-                    moves.Add((newRow + direction, Position.Col));
-                }
-            }
+                    int newRow = Position.Row + i * rowDir;
+                    int newCol = Position.Col + i * colDir;
 
-            // Captures
-            foreach (int colOffset in new[] { -1, 1 })
-            {
-                int newCol = Position.Col + colOffset;
-                if (board.IsEnemyPiece(newRow, newCol, IsWhite))
-                {
-                    moves.Add((newRow, newCol));
+                    if (board.IsWithinBounds(newRow, newCol))
+                    {
+                        if (board.IsEmpty(newRow, newCol))
+                        {
+                            moves.Add((newRow, newCol));
+                        }
+                        else
+                        {
+                            if (board.IsEnemyPiece(newRow, newCol, IsWhite))
+                            {
+                                moves.Add((newRow, newCol));
+                            }
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
 
             return moves;
         }
     }
+
+
 
     [Serializable]
     public class Knight : Piece
@@ -87,35 +103,32 @@
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int direction = IsWhite ? -1 : 1;
-            int startRow = IsWhite ? 6 : 1;
+            int[] rowOffsets = { -2, -1, 1, 2 };
+            int[] colOffsets = { -2, -1, 1, 2 };
 
-            // Move forward
-            int newRow = Position.Row + direction;
-            if (board.IsEmpty(newRow, Position.Col))
+            foreach (int rowOffset in rowOffsets)
             {
-                moves.Add((newRow, Position.Col));
-
-                // Double move from starting position
-                if (Position.Row == startRow && board.IsEmpty(newRow + direction, Position.Col))
+                foreach (int colOffset in colOffsets)
                 {
-                    moves.Add((newRow + direction, Position.Col));
-                }
-            }
-
-            // Captures
-            foreach (int colOffset in new[] { -1, 1 })
-            {
-                int newCol = Position.Col + colOffset;
-                if (board.IsEnemyPiece(newRow, newCol, IsWhite))
-                {
-                    moves.Add((newRow, newCol));
+                    if (Math.Abs(rowOffset) != Math.Abs(colOffset))
+                    {
+                        int newRow = Position.Row + rowOffset;
+                        int newCol = Position.Col + colOffset;
+                        if (board.IsWithinBounds(newRow, newCol))
+                        {
+                            if (board.IsEmpty(newRow, newCol) || board.IsEnemyPiece(newRow, newCol, IsWhite))
+                            {
+                                moves.Add((newRow, newCol));
+                            }
+                        }
+                    }
                 }
             }
 
             return moves;
         }
     }
+
 
     [Serializable]
     public class Bishop : Piece
@@ -123,35 +136,46 @@
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int direction = IsWhite ? -1 : 1;
-            int startRow = IsWhite ? 6 : 1;
+            int[] rowDirections = { -1, -1, 1, 1 };
+            int[] colDirections = { -1, 1, -1, 1 };
 
-            // Move forward
-            int newRow = Position.Row + direction;
-            if (board.IsEmpty(newRow, Position.Col))
+            for (int dir = 0; dir < 4; dir++)
             {
-                moves.Add((newRow, Position.Col));
+                int rowDir = rowDirections[dir];
+                int colDir = colDirections[dir];
 
-                // Double move from starting position
-                if (Position.Row == startRow && board.IsEmpty(newRow + direction, Position.Col))
+                for (int i = 1; i < 8; i++)
                 {
-                    moves.Add((newRow + direction, Position.Col));
-                }
-            }
+                    int newRow = Position.Row + i * rowDir;
+                    int newCol = Position.Col + i * colDir;
 
-            // Captures
-            foreach (int colOffset in new[] { -1, 1 })
-            {
-                int newCol = Position.Col + colOffset;
-                if (board.IsEnemyPiece(newRow, newCol, IsWhite))
-                {
-                    moves.Add((newRow, newCol));
+                    if (board.IsWithinBounds(newRow, newCol))
+                    {
+                        if (board.IsEmpty(newRow, newCol))
+                        {
+                            moves.Add((newRow, newCol));
+                        }
+                        else
+                        {
+                            if (board.IsEnemyPiece(newRow, newCol, IsWhite))
+                            {
+                                moves.Add((newRow, newCol));
+                            }
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
 
             return moves;
         }
     }
+
+
 
     [Serializable]
     public class Queen : Piece
@@ -159,35 +183,18 @@
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int direction = IsWhite ? -1 : 1;
-            int startRow = IsWhite ? 6 : 1;
 
-            // Move forward
-            int newRow = Position.Row + direction;
-            if (board.IsEmpty(newRow, Position.Col))
-            {
-                moves.Add((newRow, Position.Col));
+            // Queen combines Rook and Bishop moves
+            var rook = new Rook { IsWhite = this.IsWhite, Position = this.Position };
+            var bishop = new Bishop { IsWhite = this.IsWhite, Position = this.Position };
 
-                // Double move from starting position
-                if (Position.Row == startRow && board.IsEmpty(newRow + direction, Position.Col))
-                {
-                    moves.Add((newRow + direction, Position.Col));
-                }
-            }
-
-            // Captures
-            foreach (int colOffset in new[] { -1, 1 })
-            {
-                int newCol = Position.Col + colOffset;
-                if (board.IsEnemyPiece(newRow, newCol, IsWhite))
-                {
-                    moves.Add((newRow, newCol));
-                }
-            }
+            moves.AddRange(rook.GetValidMoves(board));
+            moves.AddRange(bishop.GetValidMoves(board));
 
             return moves;
         }
     }
+
 
     [Serializable]
     public class King : Piece
@@ -195,34 +202,32 @@
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int direction = IsWhite ? -1 : 1;
-            int startRow = IsWhite ? 6 : 1;
+            int[] offsets = { -1, 0, 1 };
 
-            // Move forward
-            int newRow = Position.Row + direction;
-            if (board.IsEmpty(newRow, Position.Col))
+            foreach (int rowOffset in offsets)
             {
-                moves.Add((newRow, Position.Col));
-
-                // Double move from starting position
-                if (Position.Row == startRow && board.IsEmpty(newRow + direction, Position.Col))
+                foreach (int colOffset in offsets)
                 {
-                    moves.Add((newRow + direction, Position.Col));
+                    if (rowOffset != 0 || colOffset != 0)
+                    {
+                        int newRow = Position.Row + rowOffset;
+                        int newCol = Position.Col + colOffset;
+                        if (board.IsWithinBounds(newRow, newCol))
+                        {
+                            if (board.IsEmpty(newRow, newCol) || board.IsEnemyPiece(newRow, newCol, IsWhite))
+                            {
+                                moves.Add((newRow, newCol));
+                            }
+                        }
+                    }
                 }
             }
 
-            // Captures
-            foreach (int colOffset in new[] { -1, 1 })
-            {
-                int newCol = Position.Col + colOffset;
-                if (board.IsEnemyPiece(newRow, newCol, IsWhite))
-                {
-                    moves.Add((newRow, newCol));
-                }
-            }
+            // Note: Castling not implemented here
 
             return moves;
         }
     }
+
 
 }

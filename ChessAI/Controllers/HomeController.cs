@@ -47,17 +47,21 @@ namespace ChessAI.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public IActionResult MakeMove([FromBody] MoveRequest move)
         {
             var game = HttpContext.Session.GetObjectFromJson<Game>("Game");
             if (game == null)
             {
+                _logger.LogWarning("Game not found in session.");
                 return BadRequest("Game not found.");
             }
 
-            var success = game.MakeMove((move.FromRow, move.FromCol), (move.ToRow, move.ToCol));
+            var success = game.MakeMove((move.FromRow, move.FromCol), (move.ToRow, move.ToCol), _logger);
             if (!success)
+
             {
+                _logger.LogWarning("Invalid move attempted.");
                 return BadRequest("Invalid move.");
             }
 

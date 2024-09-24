@@ -12,20 +12,27 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            flex-direction: column; /* Added to stack items vertically */
         }
 
         .chess-board {
+            --board-size: 70vmin; /* Board size variable */
+            width: var(--board-size);
+            height: var(--board-size);
             display: grid;
-            grid-template-columns: repeat(8, 70px);
-            grid-template-rows: repeat(8, 70px);
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
             gap: 0;
             border: 2px solid #000;
         }
 
         .chess-square {
-            width: 70px;
-            height: 70px;
             position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-width: 0; /* Prevents the square from expanding */
+            min-height: 0; /* Prevents the square from expanding */
         }
 
         .black {
@@ -37,23 +44,35 @@
         }
 
         .chess-piece {
-            font-size: 50px;
-            text-align: center;
-            line-height: 70px;
+            font-size: calc((var(--board-size) / 8) * 0.7);
+            font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
             cursor: grab;
         }
 
-        .chess-piece:active {
-            cursor: grabbing;
+            .chess-piece:active {
+                cursor: grabbing;
+            }
+
+        .navigate-button {
+            margin-top: 20px; /* Spacing above the button */
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
 
-        .chess-square.drag-over {
-            outline: 2px dashed #000;
+        .navigate-button:hover {
+            background-color: #0056b3;
         }
     </style>
+
+
 </head>
 <body>
-    <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+    <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
 
     <div class="chess-board-container">
         <div class="chess-board">
@@ -69,10 +88,15 @@
                     {
                         pieceSymbol = GetPieceSymbol(piece);
                     }
-                    <div class="chess-square @className" data-row="@row" data-col="@col" data-drop-target="true">
+                    <div class="chess-square @className"
+                         data-row="@row" data-col="@col" data-drop-target="true"
+                         ondragover="allowDrop(event)" ondrop="drop(event)">
                         @if (!string.IsNullOrEmpty(pieceSymbol))
                         {
-                            <div class="chess-piece" draggable="true" data-piece="@pieceSymbol" data-row="@row" data-col="@col">
+                            <div class="chess-piece" draggable="true"
+                                 data-piece="@pieceSymbol" data-row="@row" data-col="@col"
+                                 data-piece-color="@(piece.IsWhite ? "white" : "black")"
+                                 ondragstart="dragStart(event)">
                                 @pieceSymbol
                             </div>
                         }
@@ -80,78 +104,71 @@
                 }
             }
         </div>
+
+        <a class="navigate-button" asp-controller="Home" asp-action="Victory">Go to Victory</a>
+        <a class="navigate-button" asp-controller="Home" asp-action="Defeat">Go to Defeat</a>
+        <a class="navigate-button" asp-controller="Home" asp-action="Draw">Go to Draw</a>
     </div>
 
     <script>
-let draggedPiece = null;
-const isWhiteTurn = @Model.IsWhiteTurn.ToString().ToLower();
+        let draggedPiece = null;
 
-function dragStart(event) {
-    if (event.target.classList.contains('chess-piece')) {
-        const pieceColor = event.target.getAttribute('data-piece-color');
+        function dragStart(event) {
+            console.log('dragStart event fired');
 
-        if ((isWhiteTurn && pieceColor !== 'white') || (!isWhiteTurn && pieceColor !== 'black')) {
-            event.preventDefault(); // Prevent dragging opponent's pieces
-            return;
+            const isWhiteTurn = @Model.IsWhiteTurn.ToString().ToLower();
+            const pieceColor = event.target.getAttribute('data-piece-color');
+
+            if ((isWhiteTurn === 'true' && pieceColor !== 'white') || (isWhiteTurn === 'false' && pieceColor !== 'black')) {
+                event.preventDefault(); // Prevent dragging opponent's pieces
+                return;
+            }
+
+            draggedPiece = event.target;
+            event.dataTransfer.setData('text/plain', '');
         }
 
-        draggedPiece = event.target;
-        event.dataTransfer.setData('text/plain', null); // For Firefox compatibility
-        console.log('dragstart event fired');
-    }
-}
+        function allowDrop(event) {
+            event.preventDefault();
+            console.log('allowDrop event fired');
+        }
 
-function allowDrop(event) {
-    if (event.target.classList.contains('chess-square')) {
-        event.preventDefault(); // Allow drop
-        console.log('dragover event fired');
-    }
-}
+        function drop(event) {
+            event.preventDefault();
+            console.log('drop event fired');
 
-function drop(event) {
-    event.preventDefault();
-    if (event.target.classList.contains('chess-square')) {
-        console.log('drop event fired');
-        const fromRow = parseInt(draggedPiece.getAttribute('data-row'));
-        const fromCol = parseInt(draggedPiece.getAttribute('data-col'));
-        const toRow = parseInt(event.target.getAttribute('data-row'));
-        const toCol = parseInt(event.target.getAttribute('data-col'));
+            if (draggedPiece) {
+                const fromRow = parseInt(draggedPiece.getAttribute('data-row'));
+                const fromCol = parseInt(draggedPiece.getAttribute('data-col'));
+                const toRow = parseInt(event.target.getAttribute('data-row'));
+                const toCol = parseInt(event.target.getAttribute('data-col'));
 
-        postMove(fromRow, fromCol, toRow, toCol);
-    }
-}
-
-
-        document.addEventListener('dragenter', function (event) {
-            if (event.target.classList.contains('chess-square')) {
-                event.target.classList.add('drag-over');
+                postMove(fromRow, fromCol, toRow, toCol);
             }
-        });
-
-        document.addEventListener('dragleave', function (event) {
-            if (event.target.classList.contains('chess-square')) {
-                event.target.classList.remove('drag-over');
-            }
-        });
-
-        document.addEventListener('dragend', function (event) {
-            document.querySelectorAll('.chess-square.drag-over').forEach(el => el.classList.remove('drag-over'));
-        });
+        }
 
         function postMove(fromRow, fromCol, toRow, toCol) {
-            fetch('/Game/MakeMove', {
+            fetch('/Home/MakeMove', {
+
                 method: 'POST',
                 headers: {
+
                     'Content-Type': 'application/json',
                     'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
+
                 },
                 body: JSON.stringify({ fromRow, fromCol, toRow, toCol })
             }).then(response => {
                 if (response.ok) {
+
                     location.reload();
+
                 } else {
-                    alert('Invalid move');
+                    response.text().then(text => alert('Invalid move: ' + text));
                 }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while making the move.');
             });
         }
     </script>

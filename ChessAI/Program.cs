@@ -3,8 +3,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Add distributed memory cache (required for session state)
-builder.Services.AddDistributedMemoryCache();
+// Configure logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug(); // Add Debug provider
+// Set minimum log level (optional)
+builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 // Add session services
 builder.Services.AddSession(options =>
@@ -14,6 +18,14 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+// Add services to the container.
+builder.Services.AddControllersWithViews();
+builder.Services.AddSession();
+
+// Configure logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
 
 var app = builder.Build();
 
@@ -34,6 +46,7 @@ app.UseRouting();
 app.UseSession();
 
 app.UseAuthorization();
+
 
 app.MapControllerRoute(
     name: "default",
