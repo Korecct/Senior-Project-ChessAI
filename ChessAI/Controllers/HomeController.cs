@@ -1,6 +1,8 @@
 using ChessAI.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using Microsoft.AspNetCore.Http;
+using System.Text.Json;
 
 namespace ChessAI.Controllers
 {
@@ -22,11 +24,57 @@ namespace ChessAI.Controllers
         {
             return View();
         }
+        [HttpGet]
         public IActionResult Play()
         {
-            return View();
+            // Test session availability
+            HttpContext.Session.SetString("Test", "Session is working");
+            var testValue = HttpContext.Session.GetString("Test");
+            if (testValue == null)
+            {
+                return Content("Session is not working");
+            }
+
+            // Retrieve the game from the session
+            var game = HttpContext.Session.GetObjectFromJson<Game>("Game");
+            if (game == null)
+            {
+                game = new Game();
+                HttpContext.Session.SetObjectAsJson("Game", game);
+            }
+
+            return View(game);
         }
-        public IActionResult Victory()
+
+        [HttpPost]
+        public IActionResult MakeMove([FromBody] MoveRequest move)
+        {
+            var game = HttpContext.Session.GetObjectFromJson<Game>("Game");
+            if (game == null)
+            {
+                return BadRequest("Game not found.");
+            }
+
+            var success = game.MakeMove((move.FromRow, move.FromCol), (move.ToRow, move.ToCol));
+            if (!success)
+            {
+                return BadRequest("Invalid move.");
+            }
+
+            HttpContext.Session.SetObjectAsJson("Game", game);
+            return Ok();
+        }
+
+    
+
+    public class MoveRequest
+    {
+        public int FromRow { get; set; }
+        public int FromCol { get; set; }
+        public int ToRow { get; set; }
+        public int ToCol { get; set; }
+    }
+    public IActionResult Victory()
         {
             return View();
         }
