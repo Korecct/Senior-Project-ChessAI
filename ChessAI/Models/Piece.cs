@@ -1,4 +1,7 @@
-﻿namespace ChessAI.Models
+using Microsoft.VisualBasic;
+using System.IO.Pipelines;
+
+namespace ChessAI.Models
 {
     [Serializable]
     public abstract class Piece
@@ -17,7 +20,9 @@
             var moves = new List<(int Row, int Col)>();
             int direction = IsWhite ? -1 : 1; // White moves up, black moves down
 
-            int forwardRow = Position.Row + direction;
+            int forwardRow = Position.Row + direction;//For normal, traditional pawn movements.
+                int PassantRow = Position.Row - direction; //For checking EnPassant 
+                int PassantCol = Position.Col - direction;
 
             // Forward movement
             if (board.IsWithinBounds(forwardRow, Position.Col) && board.IsEmpty(forwardRow, Position.Col))
@@ -43,8 +48,23 @@
                 {
                     moves.Add((forwardRow, col));
                 }
+                
             }
 
+            if ((IsWhite && Position.Row == 3) || (!IsWhite && Position.Row == 4)) //Logic for performing En Passant movement. Capture logic found in Game.CS under MakeMove method (Game.MakeMove).
+            {
+
+                int currentCol = 0;
+                while (currentCol < 8)
+                {
+                    if (board.IsWithinBounds(forwardRow, currentCol) && board.IsEnemyPiece(Position.Row, currentCol, IsWhite) && board.checkEnPassant(IsWhite, currentCol, Position.Row))
+                    {
+                        moves.Add((forwardRow, currentCol));
+                    }
+                    currentCol++;
+                }
+            }           
+            
             return moves;
         }
     }
