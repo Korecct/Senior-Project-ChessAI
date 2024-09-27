@@ -54,9 +54,22 @@ namespace ChessAI.Models
                     return false;
                 }
 
+                if (Board.isKingInCheck(!IsWhiteTurn))
+                {
+                    logger.LogInformation($"{(!IsWhiteTurn ? "White" : "Black")} king is now in check after the move.");
+
+                    // Check for escape moves
+                    if (Board.AreAnyEscapeMovesAvailable(!IsWhiteTurn))
+                    {
+                        logger.LogInformation($"{(IsWhiteTurn ? "Black" : "White")} king is in check but has escape moves available.");
+                    }
+                    else
+                    {
+                        logger.LogInformation($"{(IsWhiteTurn ? "Black" : "White")} king is in check and has no escape moves available. Checkmate may be imminent.");
+                    }
+                }
 
                 IsWhiteTurn = !IsWhiteTurn;
-                //Increment turncounter and save boardState here. 
                 return true;
             }
             else
@@ -67,3 +80,4 @@ namespace ChessAI.Models
         }
     }
 }
+

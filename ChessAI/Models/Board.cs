@@ -119,6 +119,42 @@ namespace ChessAI.Models
             }
             throw new Exception("King not found!");
         }
+        public bool AreAnyEscapeMovesAvailable(bool isWhite)
+        {
+            var kingPosition = findKingPosition(isWhite);
+            var king = Squares[kingPosition.Row, kingPosition.Col] as King;
+
+            // Get all valid moves for the king
+            var validKingMoves = king.GetValidMoves(this);
+            foreach (var move in validKingMoves)
+            {
+                // Store original position
+                var originalPosition = king.Position;
+
+                // Simulate the move
+                Squares[move.Row, move.Col] = king;
+                Squares[kingPosition.Row, kingPosition.Col] = null;
+                king.Position = move;
+
+                // Check if the king is in check after the move
+                if (!isKingInCheck(isWhite))
+                {
+                    // Restore original position
+                    Squares[kingPosition.Row, kingPosition.Col] = king;
+                    Squares[move.Row, move.Col] = null;
+                    king.Position = originalPosition;
+                    return true; // Found a valid escape move
+                }
+
+                // Restore original position
+                Squares[kingPosition.Row, kingPosition.Col] = king;
+                Squares[move.Row, move.Col] = null;
+                king.Position = originalPosition;
+            }
+
+            return false; // No escape moves available
+        }
+
 
         public bool checkEnPassant(bool isWhite, int currentPawnCol, int passingRow)
         {
