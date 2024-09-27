@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
 namespace ChessAI.Models
@@ -33,6 +33,17 @@ namespace ChessAI.Models
                 Board.Squares[to.Row, to.Col] = piece;
                 Board.Squares[from.Row, from.Col] = null;
                 piece.Position = to;
+                if (Board.Squares[from.Row, to.Col] is Pawn pawn) //En-Passant Capture logic
+                {
+                    if (pawn.IsWhite != true)
+                    {
+                        Board.Squares[3, to.Col] = null;
+                    }
+                    if (pawn.IsWhite == true)
+                    {
+                        Board.Squares[4, to.Col] = null;
+                    }
+                }
 
                 if (Board.isKingInCheck(IsWhiteTurn))
                 {
@@ -43,7 +54,9 @@ namespace ChessAI.Models
                     return false;
                 }
 
+
                 IsWhiteTurn = !IsWhiteTurn;
+                //Increment turncounter and save boardState here. 
                 return true;
             }
             else
