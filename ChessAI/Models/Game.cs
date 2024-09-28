@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using System.Linq;
 
 namespace ChessAI.Models
 {
@@ -33,7 +34,9 @@ namespace ChessAI.Models
                 Board.Squares[to.Row, to.Col] = piece;
                 Board.Squares[from.Row, from.Col] = null;
                 piece.Position = to;
-                if (Board.Squares[from.Row, to.Col] is Pawn pawn) //En-Passant Capture logic
+
+                // Handle En-Passant capture logic
+                if (Board.Squares[from.Row, to.Col] is Pawn pawn)
                 {
                     if (pawn.IsWhite != true)
                     {
@@ -45,8 +48,16 @@ namespace ChessAI.Models
                     }
                 }
 
+                // Check for pawn promotion
+                if (piece is Pawn && (to.Row == 0 || to.Row == 7))
+                {
+                    PromotePawn(to, piece.IsWhite, logger);
+                }
+
+                // Check if the king is in check
                 if (Board.isKingInCheck(IsWhiteTurn))
                 {
+                    // Undo the move
                     Board.Squares[from.Row, from.Col] = piece;
                     Board.Squares[to.Row, to.Col] = null;
                     piece.Position = originalPosition;
@@ -54,6 +65,7 @@ namespace ChessAI.Models
                     return false;
                 }
 
+                // Check if the opposite king is in check
                 if (Board.isKingInCheck(!IsWhiteTurn))
                 {
                     logger.LogInformation($"{(!IsWhiteTurn ? "White" : "Black")} king is now in check after the move.");
@@ -77,6 +89,17 @@ namespace ChessAI.Models
                 logger.LogInformation($"Move to ({to.Row}, {to.Col}) is not valid for piece at ({from.Row}, {from.Col}).");
                 return false;
             }
+        }
+
+        private void PromotePawn((int Row, int Col) position, bool isWhite, ILogger logger)
+        {
+            // Default promotion to a queen
+            Piece newPiece = new Queen { IsWhite = isWhite, Position = position };
+
+            // Replace the pawn with the new piece
+            Board.Squares[position.Row, position.Col] = newPiece;
+
+            logger.LogInformation($"Pawn promoted to {newPiece.GetType().Name} at ({position.Row}, {position.Col}).");
         }
     }
 }
