@@ -67,6 +67,26 @@
         .navigate-button:hover {
             background-color: #0056b3;
         }
+        
+        .gamemode-button-contatiner {
+            display: flex;
+            gap: 15px;
+			flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .gamemode-button {
+            display: inline-block;
+            flex: 1 1 calc(33.3% 50px);
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007BFF;
+            color: white;
+            box-shadow: 0px 4px 4px 0px #000;
+            cursor: pointer;
+            border-radius: 5px;
+        }
     </style>
 
 
@@ -105,10 +125,20 @@
             }
         </div>
 
-        <a class="navigate-button" asp-controller="Home" asp-action="Victory">Go to Victory</a>
-        <a class="navigate-button" asp-controller="Home" asp-action="Defeat">Go to Defeat</a>
-        <a class="navigate-button" asp-controller="Home" asp-action="Draw">Go to Draw</a>
+		<a class="navigate-button" asp-controller="Home" asp-action="Victory">Go to Victory</a>
+		<a class="navigate-button" asp-controller="Home" asp-action="Defeat">Go to Defeat</a>
+		<a class="navigate-button" asp-controller="Home" asp-action="Draw">Go to Draw</a>
+
+		<div class="gamemode-button-contatiner">
+			<button type="button" class="gamemode-button" name="Tutorial">Tutorial</button>
+			<button type="button" class="gamemode-button" name="PvP">Player vs Player</button>
+			<button type="button" class="gamemode-button" name="PvAI">Player vs AI</button>
+		</div>
+
     </div>
+
+	
+    
 
     <script>
         let draggedPiece = null;
