@@ -80,6 +80,15 @@ namespace ChessAI.Models
                         logger.LogInformation($"{(IsWhiteTurn ? "Black" : "White")} king is in check and has no escape moves available. Checkmate may be imminent.");
                     }
                 }
+                else
+                {
+                    // If the king is not in check, check for stalemate
+                    if (Board.IsStalemate(!IsWhiteTurn))
+                    {
+                        logger.LogInformation($"{(!IsWhiteTurn ? "White" : "Black")} is in stalemate. The game is a draw.");
+                    }
+                }
+
 
                 IsWhiteTurn = !IsWhiteTurn;
                 return true;

@@ -28,30 +28,31 @@ namespace ChessAI.Models
             }
 
             // Initialize rooks
-            Squares[7, 0] = new Rook { IsWhite = true, Position = (7, 0) }; //A1
-            Squares[7, 7] = new Rook { IsWhite = true, Position = (7, 7) }; //H1
-            Squares[0, 0] = new Rook { IsWhite = false, Position = (0, 0) };//A8
-            Squares[0, 7] = new Rook { IsWhite = false, Position = (0, 7) };//H8
+             Squares[7, 0] = new Rook { IsWhite = true, Position = (7, 0) }; //A1
+             Squares[7, 7] = new Rook { IsWhite = true, Position = (7, 7) }; //H1
+             Squares[0, 0] = new Rook { IsWhite = false, Position = (0, 0) };//A8
+             Squares[0, 7] = new Rook { IsWhite = false, Position = (0, 7) };//H8
 
-            // Initialize knights
-            Squares[7, 1] = new Knight { IsWhite = true, Position = (7, 1) };//B1
-            Squares[7, 6] = new Knight { IsWhite = true, Position = (7, 6) };//G1
-            Squares[0, 1] = new Knight { IsWhite = false, Position = (0, 1) };//B8
-            Squares[0, 6] = new Knight { IsWhite = false, Position = (0, 6) };//G8
+             // Initialize knights
+             Squares[7, 1] = new Knight { IsWhite = true, Position = (7, 1) };//B1
+             Squares[7, 6] = new Knight { IsWhite = true, Position = (7, 6) };//G1
+             Squares[0, 1] = new Knight { IsWhite = false, Position = (0, 1) };//B8
+             Squares[0, 6] = new Knight { IsWhite = false, Position = (0, 6) };//G8
 
-            // Initialize bishops
-            Squares[7, 2] = new Bishop { IsWhite = true, Position = (7, 2) };//C1
-            Squares[7, 5] = new Bishop { IsWhite = true, Position = (7, 5) };//F1
-            Squares[0, 2] = new Bishop { IsWhite = false, Position = (0, 2) };//C8
-            Squares[0, 5] = new Bishop { IsWhite = false, Position = (0, 5) };//F8
+             // Initialize bishops
+             Squares[7, 2] = new Bishop { IsWhite = true, Position = (7, 2) };//C1
+             Squares[7, 5] = new Bishop { IsWhite = true, Position = (7, 5) };//F1
+             Squares[0, 2] = new Bishop { IsWhite = false, Position = (0, 2) };//C8
+             Squares[0, 5] = new Bishop { IsWhite = false, Position = (0, 5) };//F8
 
-            // Initialize queens
-            Squares[7, 3] = new Queen { IsWhite = true, Position = (7, 3) };//D1
-            Squares[0, 3] = new Queen { IsWhite = false, Position = (0, 3) };//D8
+             // Initialize queens
+             Squares[7, 3] = new Queen { IsWhite = true, Position = (7, 3) };//D1
+             Squares[0, 3] = new Queen { IsWhite = false, Position = (0, 3) };//D8
 
-            // Initialize kings
-            Squares[7, 4] = new King { IsWhite = true, Position = (7, 4) };//E1
-            Squares[0, 4] = new King { IsWhite = false, Position = (0, 4) };//E8
+             // Initialize kings
+             Squares[7, 4] = new King { IsWhite = true, Position = (7, 4) };//E1
+             Squares[0, 4] = new King { IsWhite = false, Position = (0, 4) };//E8
+           
         }
 
         public bool IsEmpty(int row, int col)
@@ -154,6 +155,62 @@ namespace ChessAI.Models
 
             return false; // No escape moves available
         }
+        public bool IsStalemate(bool isWhite)
+        {
+            // First, check if the king is in check. If it is, it's not a stalemate.
+            if (isKingInCheck(isWhite))
+            {
+                return false;
+            }
+
+            // Check if there are any legal moves available
+            return !AreAnyMovesAvailable(isWhite);
+        }
+
+        public bool AreAnyMovesAvailable(bool isWhite)
+        {
+            // Iterate through all squares on the board
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    // Check if the piece belongs to the player
+                    if (Squares[row, col] is Piece piece && piece.IsWhite == isWhite)
+                    {
+                        // Get valid moves for the piece
+                        var validMoves = piece.GetValidMoves(this);
+                        foreach (var move in validMoves)
+                        {
+                            // Store original position
+                            var originalPosition = piece.Position;
+
+                            // Simulate the move
+                            Squares[move.Row, move.Col] = piece;
+                            Squares[row, col] = null;
+                            piece.Position = move;
+
+                            // Check if the king is in check after the move
+                            if (!isKingInCheck(isWhite))
+                            {
+                                // Restore original position
+                                Squares[row, col] = piece;
+                                Squares[move.Row, move.Col] = null;
+                                piece.Position = originalPosition;
+                                return true; // Found a valid move
+                            }
+
+                            // Restore original position
+                            Squares[row, col] = piece;
+                            Squares[move.Row, move.Col] = null;
+                            piece.Position = originalPosition;
+                        }
+                    }
+                }
+            }
+            return false; // No moves available for any of the player's pieces
+        }
+
+
 
 
         public bool checkEnPassant(bool isWhite, int currentPawnCol, int passingRow)
