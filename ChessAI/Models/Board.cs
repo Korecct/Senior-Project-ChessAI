@@ -163,6 +163,31 @@ namespace ChessAI.Models
                 return false;
             }
 
+            // Check if there are only kings left for both sides
+            int whitePiecesCount = 0;
+            int blackPiecesCount = 0;
+
+            foreach (var piece in Squares)
+            {
+                if (piece != null)
+                {
+                    if (piece.IsWhite)
+                    {
+                        whitePiecesCount++;
+                    }
+                    else
+                    {
+                        blackPiecesCount++;
+                    }
+                }
+            }
+
+            // If only kings are left, it's a stalemate
+            if (whitePiecesCount == 1 && blackPiecesCount == 1)
+            {
+                return true;
+            }
+
             // Check if there are any legal moves available
             return !AreAnyMovesAvailable(isWhite);
         }

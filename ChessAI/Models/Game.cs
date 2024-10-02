@@ -85,7 +85,7 @@ namespace ChessAI.Models
                     // If the king is not in check, check for stalemate
                     if (Board.IsStalemate(!IsWhiteTurn))
                     {
-                        logger.LogInformation($"{(!IsWhiteTurn ? "White" : "Black")} is in stalemate. The game is a draw.");
+                        logger.LogInformation($"Stalemate. The game is a draw.");
                     }
                 }
 
