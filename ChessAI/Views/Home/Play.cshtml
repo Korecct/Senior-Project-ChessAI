@@ -11,28 +11,31 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            flex-direction: column; /* Added to stack items vertically */
+            flex-direction: column;
+            padding-top: 5px;
         }
 
         .chess-board {
-            --board-size: 70vmin; /* Board size variable */
+            --board-size:90vmin; /* Board size variable */
             width: var(--board-size);
-            height: var(--board-size);
+            height: auto; /* maintain aspect ratio */
+            aspect-ratio: 1; /* Maintains the 1:1 aspect ratio to keep the board square */
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
             gap: 0;
             border: 2px solid #000;
+            position: relative;
         }
 
         .chess-square {
-            position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
             min-width: 0; /* Prevents the square from expanding */
             min-height: 0; /* Prevents the square from expanding */
+            position: relative; /* Set to relative to position pieces absolutely within */
+            user-select: none;
         }
 
         .black {
@@ -46,12 +49,27 @@
         .chess-piece {
             font-size: calc((var(--board-size) / 8) * 0.7);
             font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
-            cursor: grab;
+            user-select: none;
+            position: absolute; /* Position absolute relative to parent chess-square */
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            left: 0; /* Ensure the piece starts at the top-left of the square */
+            top: 0;
         }
 
-            .chess-piece:active {
-                cursor: grabbing;
-            }
+        .chess-square.highlight::after {
+            content: '';
+            position: absolute;
+            width: 20%;
+            height: 20%;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            top: 40%;
+            left: 40%;
+        }
 
         .navigate-button {
             margin-top: 20px; /* Spacing above the button */
@@ -64,20 +82,20 @@
             cursor: pointer;
         }
 
-        .navigate-button:hover {
-            background-color: #0056b3;
-        }
-        
+            .navigate-button:hover {
+                background-color: #0056b3;
+            }
+
         .gamemode-button-contatiner {
             display: flex;
             gap: 15px;
-			flex-wrap: wrap;
+            flex-wrap: wrap;
             align-items: center;
         }
 
         .gamemode-button {
             display: inline-block;
-            flex: 1 1 calc(33.3% 50px);
+            flex: 1 1 calc(33.3% - 30px);
             margin-top: 20px;
             padding: 10px 20px;
             font-size: 16px;
@@ -88,35 +106,33 @@
             border-radius: 5px;
         }
     </style>
-
-
 </head>
 <body>
     <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
 
     <div class="chess-board-container">
-        <div class="chess-board">
+        <div class="chess-board" id="chessBoard">
             @for (int row = 0; row < 8; row++)
             {
                 @for (int col = 0; col < 8; col++)
                 {
                     var isBlack = (row + col) % 2 == 0;
                     var className = isBlack ? "black" : "white";
-                    var piece = Model.Board.Squares[row, col];
+                    var piece = Model.Board.Squares[row][col];
                     var pieceSymbol = "";
                     if (piece != null)
                     {
                         pieceSymbol = GetPieceSymbol(piece);
                     }
                     <div class="chess-square @className"
-                         data-row="@row" data-col="@col" data-drop-target="true"
-                         ondragover="allowDrop(event)" ondrop="drop(event)">
+                         data-row="@row" data-col="@col"
+                         onclick="squareClick(event)">
                         @if (!string.IsNullOrEmpty(pieceSymbol))
                         {
-                            <div class="chess-piece" draggable="true"
+                            <div class="chess-piece"
                                  data-piece="@pieceSymbol" data-row="@row" data-col="@col"
                                  data-piece-color="@(piece.IsWhite ? "white" : "black")"
-                                 ondragstart="dragStart(event)">
+                                 onmousedown="pieceMouseDown(event)">
                                 @pieceSymbol
                             </div>
                         }
@@ -125,56 +141,167 @@
             }
         </div>
 
-		<a class="navigate-button" asp-controller="Home" asp-action="Victory">Go to Victory</a>
-		<a class="navigate-button" asp-controller="Home" asp-action="Defeat">Go to Defeat</a>
-		<a class="navigate-button" asp-controller="Home" asp-action="Draw">Go to Draw</a>
+        <a class="navigate-button" asp-controller="Home" asp-action="Victory">Go to Victory</a>
+        <a class="navigate-button" asp-controller="Home" asp-action="Defeat">Go to Defeat</a>
+        <a class="navigate-button" asp-controller="Home" asp-action="Draw">Go to Draw</a>
 
-		<div class="gamemode-button-contatiner">
-			<button type="button" class="gamemode-button" name="Tutorial">Tutorial</button>
-			<button type="button" class="gamemode-button" name="PvP">Player vs Player</button>
-			<button type="button" class="gamemode-button" name="PvAI">Player vs AI</button>
-		</div>
-
+        <div class="gamemode-button-contatiner">
+            <button type="button" class="gamemode-button" name="Tutorial">Tutorial</button>
+            <button type="button" class="gamemode-button" name="PvP">Player vs Player</button>
+            <button type="button" class="gamemode-button" name="PvAI">Player vs AI</button>
+        </div>
     </div>
 
-	
-    
-
     <script>
-        let draggedPiece = null;
+        let selectedPiece = null;
+        let offsetX, offsetY;
+        let originalSquare = null;
 
-        function dragStart(event) {
-            console.log('dragStart event fired');
-
+        function pieceMouseDown(event) {
+            if (@Model.IsGameOver.ToString().ToLower()) {
+                // Prevent moving pieces if the game is over
+                return;
+            }
             const isWhiteTurn = @Model.IsWhiteTurn.ToString().ToLower();
             const pieceColor = event.target.getAttribute('data-piece-color');
 
             if ((isWhiteTurn === 'true' && pieceColor !== 'white') || (isWhiteTurn === 'false' && pieceColor !== 'black')) {
-                event.preventDefault(); // Prevent dragging opponent's pieces
+                // Not this player's turn
                 return;
             }
 
-            draggedPiece = event.target;
-            event.dataTransfer.setData('text/plain', '');
+            selectedPiece = event.target;
+            originalSquare = selectedPiece.parentElement;
+
+            // Get the mouse position relative to the piece
+            const rect = selectedPiece.getBoundingClientRect();
+            offsetX = event.clientX - rect.left;
+            offsetY = event.clientY - rect.top;
+
+            selectedPiece.style.zIndex = 1000;
+
+            document.addEventListener('mousemove', documentMouseMove);
+            document.addEventListener('mouseup', documentMouseUp);
+
+            // Highlight possible moves
+            const fromRow = parseInt(selectedPiece.getAttribute('data-row'));
+            const fromCol = parseInt(selectedPiece.getAttribute('data-col'));
+
+            getValidMoves(fromRow, fromCol);
+
+            event.preventDefault();
         }
 
-        function allowDrop(event) {
-            event.preventDefault();
-            console.log('allowDrop event fired');
-        }
-
-        function drop(event) {
-            event.preventDefault();
-            console.log('drop event fired');
-
-            if (draggedPiece) {
-                const fromRow = parseInt(draggedPiece.getAttribute('data-row'));
-                const fromCol = parseInt(draggedPiece.getAttribute('data-col'));
-                const toRow = parseInt(event.target.getAttribute('data-row'));
-                const toCol = parseInt(event.target.getAttribute('data-col'));
-
-                postMove(fromRow, fromCol, toRow, toCol);
+        function documentMouseMove(event) {
+            if (selectedPiece) {
+                moveAt(event.clientX, event.clientY);
             }
+        }
+
+        function moveAt(clientX, clientY) {
+            const parentRect = originalSquare.getBoundingClientRect();
+
+            const x = clientX - parentRect.left - offsetX;
+            const y = clientY - parentRect.top - offsetY;
+
+            selectedPiece.style.left = x + 'px';
+            selectedPiece.style.top = y + 'px';
+        }
+
+        function documentMouseUp(event) {
+            if (selectedPiece) {
+                // Get the square under the cursor
+                const elements = document.elementsFromPoint(event.clientX, event.clientY);
+                const square = elements.find(el => el.classList.contains('chess-square'));
+
+                if (square && square.classList.contains('highlight')) {
+                    const fromRow = parseInt(selectedPiece.getAttribute('data-row'));
+                    const fromCol = parseInt(selectedPiece.getAttribute('data-col'));
+                    const toRow = parseInt(square.getAttribute('data-row'));
+                    const toCol = parseInt(square.getAttribute('data-col'));
+
+                    postMove(fromRow, fromCol, toRow, toCol);
+                } else {
+                    // Move back to original position
+                    resetPiecePosition(selectedPiece);
+                }
+
+                clearHighlights();
+                document.removeEventListener('mousemove', documentMouseMove);
+                document.removeEventListener('mouseup', documentMouseUp);
+                selectedPiece = null;
+                originalSquare = null;
+            }
+        }
+
+        function resetPiecePosition(piece) {
+            piece.style.left = '';
+            piece.style.top = '';
+            piece.style.zIndex = '';
+        }
+
+        function squareClick(event) {
+            if (!selectedPiece) {
+                // No piece selected
+                return;
+            }
+
+            const fromRow = parseInt(selectedPiece.getAttribute('data-row'));
+            const fromCol = parseInt(selectedPiece.getAttribute('data-col'));
+            const toRow = parseInt(event.currentTarget.getAttribute('data-row'));
+            const toCol = parseInt(event.currentTarget.getAttribute('data-col'));
+
+            // Only allow moving to highlighted squares
+            if (!event.currentTarget.classList.contains('highlight')) {
+                return;
+            }
+
+            postMove(fromRow, fromCol, toRow, toCol);
+            clearHighlights();
+            selectedPiece = null;
+        }
+
+        function getValidMoves(row, col) {
+            fetch('/Home/GetValidMoves', {
+
+                method: 'POST',
+                headers: {
+
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
+
+                },
+                body: JSON.stringify({ row: row, col: col })
+            }).then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    return Promise.reject('Failed to fetch valid moves.');
+                }
+            }).then(validMoves => {
+                highlightValidMoves(validMoves);
+            }).catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function highlightValidMoves(moves) {
+            moves.forEach(move => {
+                const row = move.Row !== undefined ? move.Row : move.row;
+                const col = move.Col !== undefined ? move.Col : move.col;
+                const selector = `.chess-square[data-row='${row}'][data-col='${col}']`;
+                const square = document.querySelector(selector);
+                if (square) {
+                    square.classList.add('highlight');
+                }
+            });
+        }
+
+        function clearHighlights() {
+            const highlightedSquares = document.querySelectorAll('.chess-square.highlight');
+            highlightedSquares.forEach(square => {
+                square.classList.remove('highlight');
+            });
         }
 
         function postMove(fromRow, fromCol, toRow, toCol) {
@@ -195,10 +322,13 @@
 
                 } else {
                     response.text().then(text => alert('Invalid move: ' + text));
+                    // Reset piece position on invalid move
+                    resetPiecePosition(selectedPiece);
                 }
             }).catch(error => {
                 console.error('Error:', error);
                 alert('An error occurred while making the move.');
+                resetPiecePosition(selectedPiece);
             });
         }
     </script>

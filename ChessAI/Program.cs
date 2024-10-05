@@ -10,17 +10,13 @@ builder.Logging.AddDebug(); // Add Debug provider
 // Set minimum log level (optional)
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 
-// Add session services
+// Add session services with proper configuration
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
-
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-builder.Services.AddSession();
 
 // Configure logging
 builder.Logging.ClearProviders();
@@ -42,15 +38,13 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// Add session middleware
+// Add session middleware before UseAuthorization
 app.UseSession();
 
 app.UseAuthorization();
-
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
-

@@ -1,6 +1,3 @@
-using Microsoft.VisualBasic;
-using System.IO.Pipelines;
-
 namespace ChessAI.Models
 {
     [Serializable]
@@ -10,19 +7,25 @@ namespace ChessAI.Models
         public (int Row, int Col) Position { get; set; }
 
         public abstract List<(int Row, int Col)> GetValidMoves(Board board);
+
+        public virtual List<(int Row, int Col)> GetValidMovesIgnoringCheck(Board board)
+        {
+            return GetValidMoves(board);
+        }
     }
 
     [Serializable]
     public class Pawn : Piece
     {
+        public bool HasMoved { get; set; } = false;
+        public bool EnPassantEligible { get; set; } = false;
+
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
             int direction = IsWhite ? -1 : 1; // White moves up, black moves down
 
-            int forwardRow = Position.Row + direction;//For normal, traditional pawn movements.
-                int PassantRow = Position.Row - direction; //For checking EnPassant 
-                int PassantCol = Position.Col - direction;
+            int forwardRow = Position.Row + direction;
 
             // Forward movement
             if (board.IsWithinBounds(forwardRow, Position.Col) && board.IsEmpty(forwardRow, Position.Col))
@@ -30,10 +33,10 @@ namespace ChessAI.Models
                 moves.Add((forwardRow, Position.Col));
 
                 // First move can be two squares forward
-                if ((IsWhite && Position.Row == 6) || (!IsWhite && Position.Row == 1))
+                if (!HasMoved)
                 {
                     int doubleForwardRow = Position.Row + 2 * direction;
-                    if (board.IsEmpty(doubleForwardRow, Position.Col))
+                    if (board.IsWithinBounds(doubleForwardRow, Position.Col) && board.IsEmpty(doubleForwardRow, Position.Col))
                     {
                         moves.Add((doubleForwardRow, Position.Col));
                     }
@@ -48,23 +51,16 @@ namespace ChessAI.Models
                 {
                     moves.Add((forwardRow, col));
                 }
-                
+                // En Passant capture
+                if (board.IsWithinBounds(Position.Row, col) && board.Squares[Position.Row][col] is Pawn adjacentPawn)
+                {
+                    if (adjacentPawn.IsWhite != IsWhite && adjacentPawn.EnPassantEligible)
+                    {
+                        moves.Add((forwardRow, col));
+                    }
+                }
             }
 
-            if ((IsWhite && Position.Row == 3) || (!IsWhite && Position.Row == 4)) //Logic for performing En Passant movement. Capture logic found in Game.CS under MakeMove method (Game.MakeMove).
-            {
-
-                int currentCol = 0;
-                while (currentCol < 8)
-                {
-                    if (board.IsWithinBounds(forwardRow, currentCol) && board.IsEnemyPiece(Position.Row, currentCol, IsWhite) && board.checkEnPassant(IsWhite, currentCol, Position.Row))
-                    {
-                        moves.Add((forwardRow, currentCol));
-                    }
-                    currentCol++;
-                }
-            }           
-            
             return moves;
         }
     }
@@ -73,6 +69,8 @@ namespace ChessAI.Models
     [Serializable]
     public class Rook : Piece
     {
+        public bool HasMoved { get; set; } = false;
+
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
@@ -115,8 +113,6 @@ namespace ChessAI.Models
         }
     }
 
-
-
     [Serializable]
     public class Knight : Piece
     {
@@ -148,7 +144,6 @@ namespace ChessAI.Models
             return moves;
         }
     }
-
 
     [Serializable]
     public class Bishop : Piece
@@ -195,8 +190,6 @@ namespace ChessAI.Models
         }
     }
 
-
-
     [Serializable]
     public class Queen : Piece
     {
@@ -215,10 +208,11 @@ namespace ChessAI.Models
         }
     }
 
-
     [Serializable]
     public class King : Piece
     {
+        public bool HasMoved { get; set; } = false;
+
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
@@ -243,11 +237,87 @@ namespace ChessAI.Models
                 }
             }
 
-            // Note: Castling not implemented here
+            // Castling
+            if (!HasMoved && !board.isKingInCheck(IsWhite))
+            {
+                // Kingside castling
+                if (CanCastle(board, true))
+                {
+                    moves.Add((Position.Row, Position.Col + 2));
+                }
+                // Queenside castling
+                if (CanCastle(board, false))
+                {
+                    moves.Add((Position.Row, Position.Col - 2));
+                }
+            }
 
             return moves;
         }
+
+        public override List<(int Row, int Col)> GetValidMovesIgnoringCheck(Board board)
+        {
+            // Exclude castling to avoid infinite recursion
+            var moves = new List<(int Row, int Col)>();
+            int[] offsets = { -1, 0, 1 };
+
+            foreach (int rowOffset in offsets)
+            {
+                foreach (int colOffset in offsets)
+                {
+                    if (rowOffset != 0 || colOffset != 0)
+                    {
+                        int newRow = Position.Row + rowOffset;
+                        int newCol = Position.Col + colOffset;
+                        if (board.IsWithinBounds(newRow, newCol))
+                        {
+                            if (board.IsEmpty(newRow, newCol) || board.IsEnemyPiece(newRow, newCol, IsWhite))
+                            {
+                                moves.Add((newRow, newCol));
+                            }
+                        }
+                    }
+                }
+            }
+
+            return moves;
+        }
+
+        private bool CanCastle(Board board, bool kingSide)
+        {
+            int row = Position.Row;
+            int direction = kingSide ? 1 : -1;
+            int rookCol = kingSide ? 7 : 0;
+
+            // Checks if squares between king and rook are empty
+            int startCol = Math.Min(Position.Col, rookCol) + 1;
+            int endCol = Math.Max(Position.Col, rookCol) - 1;
+
+            for (int col = startCol; col <= endCol; col++)
+            {
+                if (!board.IsEmpty(row, col))
+                {
+                    return false;
+                }
+            }
+
+            // Checks if squares the king passes through are under attack
+            for (int col = Position.Col; col != Position.Col + 2 * direction; col += direction)
+            {
+                if (board.IsSquareUnderAttack(row, col, !IsWhite))
+                {
+                    return false;
+                }
+            }
+
+            // Checks if the rook has moved
+            var rook = board.Squares[row][rookCol] as Rook;
+            if (rook == null || rook.HasMoved)
+            {
+                return false;
+            }
+
+            return true;
+        }
     }
-
-
 }

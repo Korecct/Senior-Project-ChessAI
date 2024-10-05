@@ -1,8 +1,6 @@
 using ChessAI.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using Microsoft.AspNetCore.Http;
-using System.Text.Json;
 
 namespace ChessAI.Controllers
 {
@@ -24,17 +22,10 @@ namespace ChessAI.Controllers
         {
             return View();
         }
+
         [HttpGet]
         public IActionResult Play()
         {
-            // Test session availability
-            HttpContext.Session.SetString("Test", "Session is working");
-            var testValue = HttpContext.Session.GetString("Test");
-            if (testValue == null)
-            {
-                return Content("Session is not working");
-            }
-
             // Retrieve the game from the session
             var game = HttpContext.Session.GetObjectFromJson<Game>("Game");
             if (game == null)
@@ -57,35 +48,94 @@ namespace ChessAI.Controllers
                 return BadRequest("Game not found.");
             }
 
+            // Prevent any moves if the game is over
+            if (game.IsGameOver)
+            {
+                _logger.LogWarning("Attempted to make a move after the game is over.");
+                return BadRequest("The game is already over.");
+            }
+
             var success = game.MakeMove((move.FromRow, move.FromCol), (move.ToRow, move.ToCol), _logger);
             if (!success)
-
             {
                 _logger.LogWarning("Invalid move attempted.");
                 return BadRequest("Invalid move.");
             }
 
             HttpContext.Session.SetObjectAsJson("Game", game);
-            return Ok();
+
+            // Prepare response with game state
+            var response = new
+            {
+                success = true,
+                isGameOver = game.IsGameOver,
+                gameResult = game.GameResult
+            };
+
+            return Json(response);
         }
 
-    
+        [HttpPost]
+        public IActionResult GetValidMoves([FromBody] PositionModel position)
+        {
+            // Retrieve the game from session
+            var game = HttpContext.Session.GetObjectFromJson<Game>("Game");
+            if (game == null)
+            {
+                _logger.LogWarning("Game not found in session.");
+                return BadRequest("Game not found.");
+            }
 
-    public class MoveRequest
-    {
-        public int FromRow { get; set; }
-        public int FromCol { get; set; }
-        public int ToRow { get; set; }
-        public int ToCol { get; set; }
-    }
-    public IActionResult Victory()
+            var piece = game.Board.Squares[position.Row][position.Col];
+            if (piece == null || piece.IsWhite != game.IsWhiteTurn)
+            {
+                _logger.LogWarning("Invalid piece selected or not player's turn.");
+                return BadRequest("Invalid piece selected.");
+            }
+
+            var validMoves = piece.GetValidMoves(game.Board);
+
+            // Filter out moves that would put own king in check
+            var safeMoves = new List<PositionModel>();
+
+            foreach (var move in validMoves)
+            {
+                // Simulate the move
+                var originalPosition = piece.Position;
+                var capturedPiece = game.Board.Squares[move.Row][move.Col];
+
+                game.Board.Squares[originalPosition.Row][originalPosition.Col] = null;
+                game.Board.Squares[move.Row][move.Col] = piece;
+                piece.Position = (move.Row, move.Col);
+
+                // Check if own king is in check
+                bool isInCheck = game.Board.isKingInCheck(piece.IsWhite);
+
+                // Undo the move
+                game.Board.Squares[originalPosition.Row][originalPosition.Col] = piece;
+                game.Board.Squares[move.Row][move.Col] = capturedPiece;
+                piece.Position = originalPosition;
+
+                if (!isInCheck)
+                {
+                    safeMoves.Add(new PositionModel { Row = move.Row, Col = move.Col });
+                }
+            }
+
+            // Return the valid moves as JSON with camelCase property names
+            return Json(safeMoves);
+        }
+
+        public IActionResult Victory()
         {
             return View();
         }
+
         public IActionResult Defeat()
         {
             return View();
         }
+
         public IActionResult Draw()
         {
             return View();
@@ -95,6 +145,20 @@ namespace ChessAI.Controllers
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        public class MoveRequest
+        {
+            public int FromRow { get; set; }
+            public int FromCol { get; set; }
+            public int ToRow { get; set; }
+            public int ToCol { get; set; }
+        }
+
+        public class PositionModel
+        {
+            public int Row { get; set; }
+            public int Col { get; set; }
         }
     }
 }
