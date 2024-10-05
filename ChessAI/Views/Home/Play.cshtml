@@ -6,106 +6,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Chess Game</title>
-    <style>
-        .chess-board-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            padding-top: 5px;
-        }
-
-        .chess-board {
-            --board-size:90vmin; /* Board size variable */
-            width: var(--board-size);
-            height: auto; /* maintain aspect ratio */
-            aspect-ratio: 1; /* Maintains the 1:1 aspect ratio to keep the board square */
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            grid-template-rows: repeat(8, 1fr);
-            gap: 0;
-            border: 2px solid #000;
-            position: relative;
-        }
-
-        .chess-square {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-width: 0; /* Prevents the square from expanding */
-            min-height: 0; /* Prevents the square from expanding */
-            position: relative; /* Set to relative to position pieces absolutely within */
-            user-select: none;
-        }
-
-        .black {
-            background-color: #769656;
-        }
-
-        .white {
-            background-color: #eeeed2;
-        }
-
-        .chess-piece {
-            font-size: calc((var(--board-size) / 8) * 0.7);
-            font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
-            user-select: none;
-            position: absolute; /* Position absolute relative to parent chess-square */
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            left: 0; /* Ensure the piece starts at the top-left of the square */
-            top: 0;
-        }
-
-        .chess-square.highlight::after {
-            content: '';
-            position: absolute;
-            width: 20%;
-            height: 20%;
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 50%;
-            top: 40%;
-            left: 40%;
-        }
-
-        .navigate-button {
-            margin-top: 20px; /* Spacing above the button */
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-            .navigate-button:hover {
-                background-color: #0056b3;
-            }
-
-        .gamemode-button-contatiner {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .gamemode-button {
-            display: inline-block;
-            flex: 1 1 calc(33.3% - 30px);
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #007BFF;
-            color: white;
-            box-shadow: 0px 4px 4px 0px #000;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-    </style>
 </head>
 <body>
     <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
@@ -140,10 +40,6 @@
                 }
             }
         </div>
-
-        <a class="navigate-button" asp-controller="Home" asp-action="Victory">Go to Victory</a>
-        <a class="navigate-button" asp-controller="Home" asp-action="Defeat">Go to Defeat</a>
-        <a class="navigate-button" asp-controller="Home" asp-action="Draw">Go to Draw</a>
 
         <div class="gamemode-button-contatiner">
             <button type="button" class="gamemode-button" name="Tutorial">Tutorial</button>
@@ -263,13 +159,10 @@
 
         function getValidMoves(row, col) {
             fetch('/Home/GetValidMoves', {
-
                 method: 'POST',
                 headers: {
-
                     'Content-Type': 'application/json',
                     'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
-
                 },
                 body: JSON.stringify({ row: row, col: col })
             }).then(response => {
@@ -304,25 +197,65 @@
             });
         }
 
+        function playSound(event) {
+            const soundElement = document.getElementById(`sound${event}`);
+            if (soundElement) {
+                soundElement.play();
+            }
+        }
+
+        function playSound(event) {
+            const soundElement = document.getElementById(`sound${event}`);
+            if (soundElement) {
+                soundElement.play();
+            }
+        }
+
         function postMove(fromRow, fromCol, toRow, toCol) {
             fetch('/Home/MakeMove', {
-
                 method: 'POST',
                 headers: {
-
                     'Content-Type': 'application/json',
                     'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
-
                 },
                 body: JSON.stringify({ fromRow, fromCol, toRow, toCol })
             }).then(response => {
                 if (response.ok) {
-
-                    location.reload();
-
+                    return response.json();
                 } else {
-                    response.text().then(text => alert('Invalid move: ' + text));
-                    // Reset piece position on invalid move
+                    return Promise.reject('Invalid move.');
+                }
+            }).then(response => {
+                if (response.success) {
+                    // Plays a sound based on specific events
+                    if (response.isCheckmate) {
+                        playSound('Checkmate');
+                    } else if (response.isCheck) {
+                        playSound('Check');
+                    } else if (response.isCastle) {
+                        playSound('Castle');
+                    } else if (response.isCapture) {
+                        playSound('Capture');
+                    } else if (response.isPromotion) {
+                        playSound('Promotion');
+                    } else {
+                        // If no other special event sound is played, then play the move sound
+                        playSound('Move');
+                    }
+
+                    updateBoard();
+
+                    if (response.isGameOver) {
+                        if (response.gameResult.includes('wins')) {
+                            playSound('Victory');
+                        } else if (response.gameResult.includes('draw') || response.gameResult.includes('stalemate')) {
+                            playSound('Stalemate');
+                        } else {
+                            playSound('Defeat');
+                        }
+                    }
+                } else {
+                    alert('Invalid move.');
                     resetPiecePosition(selectedPiece);
                 }
             }).catch(error => {
@@ -330,6 +263,20 @@
                 alert('An error occurred while making the move.');
                 resetPiecePosition(selectedPiece);
             });
+        }
+
+        function updateBoard() {
+            fetch('/Home/Play')
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const updatedBoard = doc.getElementById('chessBoard');
+                    const chessBoardContainer = document.getElementById('chessBoard');
+                    chessBoardContainer.innerHTML = updatedBoard.innerHTML;
+                }).catch(error => {
+                    console.error('Error:', error);
+                });
         }
     </script>
 
@@ -352,5 +299,17 @@
                 return "";
         }
     }
+
+    <!-- Loads Sounds -->
+    <audio id="soundMove" src="/sounds/move.mp3" preload="auto"></audio>
+    <audio id="soundCheck" src="/sounds/check.mp3" preload="auto"></audio>
+    <audio id="soundCheckmate" src="/sounds/checkmate.mp3" preload="auto"></audio>
+    <audio id="soundCastle" src="/sounds/castle.mp3" preload="auto"></audio>
+    <audio id="soundCapture" src="/sounds/capture.mp3" preload="auto"></audio>
+    <audio id="soundPromotion" src="/sounds/promotion.mp3" preload="auto"></audio>
+    <audio id="soundVictory" src="/sounds/victory.mp3" preload="auto"></audio>
+    <audio id="soundStalemate" src="/sounds/stalemate.mp3" preload="auto"></audio>
+    <audio id="soundDefeat" src="/sounds/defeat.mp3" preload="auto"></audio>
+
 </body>
 </html>
