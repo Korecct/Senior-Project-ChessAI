@@ -64,11 +64,33 @@ namespace ChessAI.Controllers
                 return BadRequest("The game is already over.");
             }
 
+            // Track game state changes
+            bool wasInCheckBeforeMove = game.Board.isKingInCheck(game.IsWhiteTurn);
+            bool wasInCheckAfterMove = false;
+            bool isCapture = game.Board.Squares[move.ToRow][move.ToCol] != null;
+            bool isPromotion = false;
+            bool isCastle = false;
+
             var success = game.MakeMove((move.FromRow, move.FromCol), (move.ToRow, move.ToCol), _logger);
             if (!success)
             {
                 _logger.LogWarning("Invalid move attempted.");
                 return BadRequest("Invalid move.");
+            }
+
+            // Checks if the opponent is now in check
+            wasInCheckAfterMove = game.Board.isKingInCheck(!game.IsWhiteTurn);
+
+            // Checks for pawn promotion
+            if (game.Board.Squares[move.ToRow][move.ToCol] is Pawn pawn && (move.ToRow == 0 || move.ToRow == 7))
+            {
+                isPromotion = true;
+            }
+
+            // Checks for castling
+            if (Math.Abs(move.FromCol - move.ToCol) == 2 && game.Board.Squares[move.ToRow][move.ToCol] is King)
+            {
+                isCastle = true;
             }
 
             HttpContext.Session.SetObjectAsJson("Game", game);
@@ -78,7 +100,12 @@ namespace ChessAI.Controllers
             {
                 success = true,
                 isGameOver = game.IsGameOver,
-                gameResult = game.GameResult
+                gameResult = game.GameResult,
+                isCheckmate = game.IsGameOver && game.GameResult.Contains("wins"),
+                isCheck = wasInCheckAfterMove,
+                isCapture = isCapture,
+                isPromotion = isPromotion,
+                isCastle = isCastle
             };
 
             return Json(response);
