@@ -26,6 +26,15 @@ namespace ChessAI.Controllers
         [HttpGet]
         public IActionResult Play()
         {
+
+            // Test session availability
+            HttpContext.Session.SetString("Test", "Session is working");
+            var testValue = HttpContext.Session.GetString("Test");
+            if (testValue == null)
+            {
+                return Content("Session is not working");
+            }
+
             // Retrieve the game from the session
             var game = HttpContext.Session.GetObjectFromJson<Game>("Game");
             if (game == null)
