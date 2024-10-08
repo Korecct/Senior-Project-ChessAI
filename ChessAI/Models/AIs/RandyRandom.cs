@@ -3,6 +3,9 @@
 namespace ChessAI.Models.AIs
 {
     // Randy Random is very random
+    
+    // Do not modify, make a copy of this file and rename the AI
+
     public class RandyRandom : IAIPlayer
     {
         private static readonly Random _random = new Random();
