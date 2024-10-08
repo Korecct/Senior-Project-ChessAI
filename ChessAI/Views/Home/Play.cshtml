@@ -1,24 +1,72 @@
-﻿@model ChessAI.Models.Game
+﻿@model ChessAI.Controllers.HomeController.PlayViewModel
+@using ChessAI.Models.AIs
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Chess Game</title>
 </head>
 <body>
     <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
 
     <div class="chess-board-container">
-        <div class="chess-board" id="chessBoard">
+        <!-- GameMode Indicator -->
+        <div class="game-mode-indicator">
+            <span>Current Mode:</span>
+            <strong>@Model.GameMode</strong>
+            @if (Model.GameMode == "PvAI" && !string.IsNullOrEmpty(Model.SelectedAI))
+            {
+                <span> - AI: <strong>@Model.SelectedAI</strong></span>
+            }
+        </div>
+
+        <!-- GameResult Modal -->
+        <div id="gameResultModal" class="game-result-modal" style="display: none;">
+            <div class="game-result-content">
+                <span id="gameResultMessage" class="game-result-message"></span>
+                <div class="modal-buttons">
+                    <button type="button" class="restart-button" onclick="restartGame()">Restart</button>
+                    <button type="button" class="close-button" onclick="closeGameResultModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- AI Selection UI (only visible in PvAI mode) -->
+        @if (Model.GameMode == "PvAI")
+        {
+
+            <div class="ai-selection-container">
+                <label for="aiSelect">Choose AI:</label>
+                <select id="aiSelect" name="aiSelect">
+                    <option value="">-- Select an AI --</option>
+                    @foreach (var ai in AIFactory.GetAllAIPlayers())
+                    {
+                        <option value="@ai.Name">@ai.Name</option>
+                    }
+                </select>
+                <button type="button" onclick="selectAIAndStartGame()">Start Game</button>
+                <button type="button" onclick="setGameMode('PvAI')">Restart</button>
+            </div>
+        }
+
+        <!-- PvP Selection UI (only visible in PvP mode) -->
+        @if (Model.GameMode == "PvP")
+        {
+            <div class="ai-selection-container">
+                <button type="button" onclick="setGameMode('PvP')">Restart</button>
+            </div>
+        }
+
+        <div class="chess-board @(Model.GameMode == "PvAI" && string.IsNullOrEmpty(ViewBag.SelectedAI) ? "disabled" : "")" id="chessBoard">
             @for (int row = 0; row < 8; row++)
             {
                 @for (int col = 0; col < 8; col++)
                 {
                     var isBlack = (row + col) % 2 == 0;
                     var className = isBlack ? "black" : "white";
-                    var piece = Model.Board.Squares[row][col];
+                    var piece = Model.Game.Board.Squares[row][col];
                     var pieceSymbol = "";
                     if (piece != null)
                     {
@@ -31,6 +79,7 @@
                         {
                             <div class="chess-piece"
                                  data-piece="@pieceSymbol" data-row="@row" data-col="@col"
+                                 data-piece-type="@piece.GetType().Name"
                                  data-piece-color="@(piece.IsWhite ? "white" : "black")"
                                  onmousedown="pieceMouseDown(event)">
                                 @pieceSymbol
@@ -41,10 +90,10 @@
             }
         </div>
 
-        <div class="gamemode-button-contatiner">
-            <button type="button" class="gamemode-button" name="Tutorial">Tutorial</button>
-            <button type="button" class="gamemode-button" name="PvP">Player vs Player</button>
-            <button type="button" class="gamemode-button" name="PvAI">Player vs AI</button>
+        <div class="gamemode-button-container">
+            <button type="button" class="gamemode-button @(Model.GameMode == "Tutorial" ? "active" : "")" name="Tutorial" onclick="setGameMode('Tutorial')">Tutorial</button>
+            <button type="button" class="gamemode-button @(Model.GameMode == "PvP" ? "active" : "")" name="PvP" onclick="setGameMode('PvP')">Player vs Player</button>
+            <button type="button" class="gamemode-button @(Model.GameMode == "PvAI" ? "active" : "")" name="PvAI" onclick="setGameMode('PvAI')">Player vs AI</button>
         </div>
     </div>
 
@@ -52,13 +101,14 @@
         let selectedPiece = null;
         let offsetX, offsetY;
         let originalSquare = null;
+        let isGameBusy = false;
 
         function pieceMouseDown(event) {
-            if (@Model.IsGameOver.ToString().ToLower()) {
-                // Prevent moving pieces if the game is over
+            if (@Model.Game.IsGameOver.ToString().ToLower() || isGameBusy) {
+                // Prevent moving pieces if the game is over or if AI is busy
                 return;
             }
-            const isWhiteTurn = @Model.IsWhiteTurn.ToString().ToLower();
+            let isWhiteTurn = @Model.Game.IsWhiteTurn.ToString().ToLower();
             const pieceColor = event.target.getAttribute('data-piece-color');
 
             if ((isWhiteTurn === 'true' && pieceColor !== 'white') || (isWhiteTurn === 'false' && pieceColor !== 'black')) {
@@ -200,83 +250,355 @@
         function playSound(event) {
             const soundElement = document.getElementById(`sound${event}`);
             if (soundElement) {
+                // Reset for imediate replay
+                soundElement.currentTime = 0;
                 soundElement.play();
             }
         }
 
-        function playSound(event) {
-            const soundElement = document.getElementById(`sound${event}`);
-            if (soundElement) {
-                soundElement.play();
+        async function postMove(fromRow, fromCol, toRow, toCol) {
+            if (isGameBusy) {
+                return;
+            }
+            isGameBusy = true;
+
+            try {
+                const response = await fetch('/Home/MakeMove', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
+                    },
+                    body: JSON.stringify({ fromRow, fromCol, toRow, toCol })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Invalid move.');
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Move the players piece in the UI
+                    movePieceInUI(fromRow, fromCol, toRow, toCol, data);
+
+                    // Play sound for player's move
+                    playPlayerMoveSound(data);
+
+                    // Check for game over after player's move
+                    if (data.isGameOver) {
+                        handleGameOver(data.gameResult);
+                        isGameBusy = false; // Game over
+                        return;
+                    }
+
+                    isWhiteTurn = data.isWhiteTurn.toString();
+
+                    // handle AI movement if exists
+                    if (data.aiMove) {
+                        // Adds a delay before AI moves
+                        setTimeout(() => {
+                            // Animate the AI's move (broken)
+                            makeAIMove(data.aiMove.from, data.aiMove.to, data);
+
+                            // After AI's move is done, allow player interaction
+                            isGameBusy = false;
+
+                        }, 1000); // Delay 1 second before AI moves
+                    } else {
+                        
+                        isGameBusy = false;
+                    }
+
+                } else {
+                    alert('Invalid move.');
+                    resetPiecePosition(selectedPiece);
+                    isGameBusy = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while making the move.');
+                resetPiecePosition(selectedPiece);
+                isGameBusy = false;
             }
         }
 
-        function postMove(fromRow, fromCol, toRow, toCol) {
-            fetch('/Home/MakeMove', {
+        function movePieceInUI(fromRow, fromCol, toRow, toCol, data) {
+            const fromSquare = document.querySelector(`.chess-square[data-row='${fromRow}'][data-col='${fromCol}']`);
+            const toSquare = document.querySelector(`.chess-square[data-row='${toRow}'][data-col='${toCol}']`);
+
+            if (fromSquare && toSquare) {
+                const piece = fromSquare.querySelector('.chess-piece');
+                if (piece) {
+                    // Remove any piece at the destination (for captures)
+                    const capturedPiece = toSquare.querySelector('.chess-piece');
+                    if (capturedPiece) {
+                        capturedPiece.remove();
+                    }
+
+                    // Move the piece to the new square
+                    toSquare.appendChild(piece);
+                    // Update the piece's data attributes
+                    piece.setAttribute('data-row', toRow);
+                    piece.setAttribute('data-col', toCol);
+                    // Reset piece styles
+                    resetPiecePosition(piece);
+
+                    // Pawn Promotion
+                    if (data.playerIsPromotion) {
+                        // Update piece symbol to Queen
+                        const isWhite = piece.getAttribute('data-piece-color') === 'white';
+                        const queenSymbol = isWhite ? '♕' : '♛';
+                        piece.textContent = queenSymbol;
+
+                        // Update data attributes
+                        piece.setAttribute('data-piece-type', 'Queen');
+                        piece.setAttribute('data-piece', queenSymbol);
+                    }
+
+                    // En Passant
+                    if (data.playerIsEnPassantCapture) {
+                        const capturedPawnRow = piece.getAttribute('data-piece-color') === 'white' ? toRow + 1 : toRow - 1;
+                        const capturedPawnSquare = document.querySelector(`.chess-square[data-row='${capturedPawnRow}'][data-col='${toCol}']`);
+                        const capturedPawn = capturedPawnSquare.querySelector('.chess-piece');
+                        if (capturedPawn) {
+                            capturedPawn.remove();
+                        }
+                    }
+
+                    // Castling
+                    if (data.playerIsCastle) {
+                        const isKingsideCastle = toCol > fromCol;
+                        const rookFromCol = isKingsideCastle ? 7 : 0;
+                        const rookToCol = isKingsideCastle ? toCol - 1 : toCol + 1;
+                        const rookRow = fromRow;
+                        const rookFromSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookFromCol}']`);
+                        const rookToSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookToCol}']`);
+                        const rookPiece = rookFromSquare.querySelector('.chess-piece');
+                        if (rookPiece) {
+                            rookToSquare.appendChild(rookPiece);
+                            rookPiece.setAttribute('data-row', rookRow);
+                            rookPiece.setAttribute('data-col', rookToCol);
+                        }
+                    }
+                }
+            }
+        }
+
+
+        function playPlayerMoveSound(data) {
+            if (data.playerIsCheckmate) {
+                playSound('Checkmate');
+            } else if (data.playerIsCheck) {
+                playSound('Check');
+            } else if (data.playerIsCastle) {
+                playSound('Castle');
+            } else if (data.playerIsCapture || data.playerIsEnPassantCapture) {
+                playSound('Capture');
+            } else if (data.playerIsPromotion) {
+                playSound('Promotion');
+            } else {
+                playSound('Move');
+            }
+        }
+
+        function playAIMoveSound(data) {
+            if (data.aiIsCheckmate) {
+                playSound('Checkmate');
+            } else if (data.aiIsCheck) {
+                playSound('Check');
+            } else if (data.aiIsCastle) {
+                playSound('Castle');
+            } else if (data.aiIsCapture || data.aiIsEnPassantCapture) {
+                playSound('Capture');
+            } else if (data.aiIsPromotion) {
+                playSound('Promotion');
+            } else {
+                playSound('Move');
+            }
+        }
+
+        function makeAIMove(from, to, data) {
+            const fromSquare = document.querySelector(`.chess-square[data-row='${from.row}'][data-col='${from.col}']`);
+            const toSquare = document.querySelector(`.chess-square[data-row='${to.row}'][data-col='${to.col}']`);
+
+            if (fromSquare && toSquare) {
+                const piece = fromSquare.querySelector('.chess-piece');
+                if (piece) {
+                    // Remove any piece at the destination (for captures)
+                    const capturedPiece = toSquare.querySelector('.chess-piece');
+                    if (capturedPiece) {
+                        capturedPiece.remove();
+                    }
+
+                    // Move the piece to the new square
+                    toSquare.appendChild(piece);
+                    // Update the piece's data attributes
+                    piece.setAttribute('data-row', to.row);
+                    piece.setAttribute('data-col', to.col);
+
+                    // Handle Pawn Promotion
+                    if (data.aiIsPromotion) {
+                        const isWhite = piece.getAttribute('data-piece-color') === 'white';
+                        const queenSymbol = isWhite ? '♕' : '♛';
+                        piece.textContent = queenSymbol;
+                        piece.setAttribute('data-piece-type', 'Queen');
+                        piece.setAttribute('data-piece', queenSymbol);
+                    }
+
+                    // Handle En Passant
+                    if (data.aiIsEnPassantCapture) {
+                        const capturedPawnRow = piece.getAttribute('data-piece-color') === 'white' ? to.row + 1 : to.row - 1;
+                        const capturedPawnSquare = document.querySelector(`.chess-square[data-row='${capturedPawnRow}'][data-col='${to.col}']`);
+                        const capturedPawn = capturedPawnSquare.querySelector('.chess-piece');
+                        if (capturedPawn) {
+                            capturedPawn.remove();
+                        }
+                    }
+
+                    // Handle Castling
+                    if (data.aiIsCastle) {
+                        const isKingsideCastle = to.col > from.col;
+                        const rookFromCol = isKingsideCastle ? 7 : 0;
+                        const rookToCol = isKingsideCastle ? to.col - 1 : to.col + 1;
+                        const rookRow = from.row;
+                        const rookFromSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookFromCol}']`);
+                        const rookToSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookToCol}']`);
+                        const rookPiece = rookFromSquare.querySelector('.chess-piece');
+                        if (rookPiece) {
+                            rookToSquare.appendChild(rookPiece);
+                            rookPiece.setAttribute('data-row', rookRow);
+                            rookPiece.setAttribute('data-col', rookToCol);
+                        }
+                    }
+
+                    // Play AI move sound
+                    playAIMoveSound(data);
+
+                    // Check for game over after AI's move
+                    if (data.isGameOver) {
+                        handleGameOver(data.gameResult);
+                    }
+                }
+            }
+        }
+
+        function handleGameOver(gameResult) {
+            // Play corresponding sound
+            if (gameResult.includes("wins")) {
+                playSound('Victory');
+            } else if (gameResult.includes("draw") || gameResult.includes("stalemate")) {
+                playSound('Stalemate');
+            } else {
+                playSound('Defeat');
+            }
+
+            // Display the game result in the modal
+            showGameResultModal(gameResult);
+        }
+
+        function showGameResultModal(message) {
+            const modal = document.getElementById('gameResultModal');
+            const messageElement = document.getElementById('gameResultMessage');
+            messageElement.textContent = message;
+            modal.style.display = 'flex';
+        }
+
+        function closeGameResultModal() {
+            const modal = document.getElementById('gameResultModal');
+            modal.style.display = 'none';
+        }
+
+        function restartGame() {
+            const restartButton = document.querySelector('.restart-button');
+            if (restartButton) {
+                restartButton.disabled = true;
+                restartButton.textContent = 'Restarting...';
+            }
+
+            fetch('/Home/RestartGame', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
+                }
+            }).then(response => {
+                if (response.ok) {
+                    // Reload the page to start a new game
+                    window.location.reload();
+                } else {
+                    alert('Failed to restart the game.');
+                    if (restartButton) {
+                        restartButton.disabled = false;
+                        restartButton.textContent = 'Restart';
+                    }
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while restarting the game.');
+                if (restartButton) {
+                    restartButton.disabled = false;
+                    restartButton.textContent = 'Restart';
+                }
+            });
+        }
+
+
+        // Close the modal when clicking outside the content
+        window.onclick = function (event) {
+            const modal = document.getElementById('gameResultModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function selectAIAndStartGame() {
+            const aiName = document.getElementById('aiSelect').value;
+            if (!aiName) {
+                alert('Please select an AI to start the game.');
+                return;
+            }
+
+            fetch('/Home/SelectAI', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
                 },
-                body: JSON.stringify({ fromRow, fromCol, toRow, toCol })
+                body: JSON.stringify({ AIName: aiName })
             }).then(response => {
                 if (response.ok) {
-                    return response.json();
+                    // Reload the page to start the game
+                    window.location.reload();
                 } else {
-                    return Promise.reject('Invalid move.');
-                }
-            }).then(response => {
-                if (response.success) {
-                    // Plays a sound based on specific events
-                    if (response.isCheckmate) {
-                        playSound('Checkmate');
-                    } else if (response.isCheck) {
-                        playSound('Check');
-                    } else if (response.isCastle) {
-                        playSound('Castle');
-                    } else if (response.isCapture) {
-                        playSound('Capture');
-                    } else if (response.isPromotion) {
-                        playSound('Promotion');
-                    } else {
-                        // If no other special event sound is played, then play the move sound
-                        playSound('Move');
-                    }
-
-                    updateBoard();
-
-                    if (response.isGameOver) {
-                        if (response.gameResult.includes('wins')) {
-                            playSound('Victory');
-                        } else if (response.gameResult.includes('draw') || response.gameResult.includes('stalemate')) {
-                            playSound('Stalemate');
-                        } else {
-                            playSound('Defeat');
-                        }
-                    }
-                } else {
-                    alert('Invalid move.');
-                    resetPiecePosition(selectedPiece);
+                    alert('Failed to select AI.');
                 }
             }).catch(error => {
                 console.error('Error:', error);
-                alert('An error occurred while making the move.');
-                resetPiecePosition(selectedPiece);
+                alert('An error occurred while selecting the AI.');
             });
         }
 
-        function updateBoard() {
-            fetch('/Home/Play')
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const updatedBoard = doc.getElementById('chessBoard');
-                    const chessBoardContainer = document.getElementById('chessBoard');
-                    chessBoardContainer.innerHTML = updatedBoard.innerHTML;
-                }).catch(error => {
-                    console.error('Error:', error);
-                });
+        // Set game mode when gamemode buttons are pressed
+        function setGameMode(mode) {
+            fetch('/Home/SetGameMode', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
+                },
+                body: JSON.stringify({ GameMode: mode })
+            }).then(response => {
+                if (response.ok) {
+                    // Reload the page to apply changes
+                    window.location.reload();
+                } else {
+                    alert('Failed to set game mode.');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while setting the game mode.');
+            });
         }
     </script>
 

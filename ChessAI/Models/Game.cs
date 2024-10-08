@@ -38,21 +38,29 @@ namespace ChessAI.Models
                 piece.Position = move;
 
                 // Handle En Passant capture in simulation
-                Piece enPassantCaptured = null;
-                if (piece is Pawn movingPawn && capturedPiece == null && from.Col != to.Col)
+                Piece enPassantCapturedPawn = null;
+                if (piece is Pawn && Board.Squares[move.Row][move.Col] == null && move.Col != originalPosition.Col)
                 {
-                    int capturedPawnRow = IsWhiteTurn ? move.Row + 1 : move.Row - 1;
-                    enPassantCaptured = Board.Squares[capturedPawnRow][move.Col];
+                    // capture
+                    int capturedPawnRow = originalPosition.Row;
+                    enPassantCapturedPawn = Board.Squares[capturedPawnRow][move.Col];
                     Board.Squares[capturedPawnRow][move.Col] = null;
                 }
 
                 // Check if own king is in check
-                bool isInCheck = Board.isKingInCheck(piece.IsWhite);
+                bool isInCheck = Board.IsKingInCheck(piece.IsWhite);
 
                 // Undo the move
                 Board.Squares[originalPosition.Row][originalPosition.Col] = piece;
                 Board.Squares[move.Row][move.Col] = capturedPiece;
                 piece.Position = originalPosition;
+
+                // Restore captured pawn if en passant
+                if (enPassantCapturedPawn != null)
+                {
+                    int capturedPawnRow = originalPosition.Row;
+                    Board.Squares[capturedPawnRow][move.Col] = enPassantCapturedPawn;
+                }
 
                 return !isInCheck;
             }).ToList();
@@ -61,11 +69,32 @@ namespace ChessAI.Models
 
             if (validMoves.Any(m => m.Row == to.Row && m.Col == to.Col))
             {
-                // Reset En Passant eligibility for all pawns before making the move
-                ResetEnPassantEligibility();
-
-                var originalPosition = piece.Position;
                 var capturedPiece = Board.Squares[to.Row][to.Col];
+                var originalPosition = piece.Position;
+
+                // Castling
+                if (piece is King king && Math.Abs(to.Col - from.Col) == 2)
+                {
+                    // Castling move
+                    int rookFromCol = to.Col > from.Col ? 7 : 0;
+                    int rookToCol = to.Col > from.Col ? to.Col - 1 : to.Col + 1;
+                    var rook = Board.Squares[from.Row][rookFromCol] as Rook;
+
+                    // Move the rook
+                    Board.Squares[from.Row][rookFromCol] = null;
+                    Board.Squares[from.Row][rookToCol] = rook;
+                    rook.Position = (from.Row, rookToCol);
+                    rook.HasMoved = true;
+                }
+
+                // En passant
+                if (piece is Pawn pawn && Board.Squares[to.Row][to.Col] == null && to.Col != from.Col)
+                {
+                    // En passant capture
+                    int capturedPawnRow = from.Row;
+                    capturedPiece = Board.Squares[capturedPawnRow][to.Col];
+                    Board.Squares[capturedPawnRow][to.Col] = null;
+                }
 
                 // Move piece
                 Board.Squares[to.Row][to.Col] = piece;
@@ -73,48 +102,37 @@ namespace ChessAI.Models
                 piece.Position = to;
 
                 // Update piece's HasMoved property if applicable
-                if (piece is Pawn pawn)
+                if (piece is Pawn movingPawn)
                 {
-                    pawn.HasMoved = true;
-
-                    // Handle En Passant eligibility
-                    pawn.EnPassantEligible = Math.Abs(from.Row - to.Row) == 2;
-                }
-                else if (piece is Rook rook)
-                {
-                    rook.HasMoved = true;
-                }
-                else if (piece is King king)
-                {
-                    king.HasMoved = true;
-
-                    // Handle Castling
-                    if (Math.Abs(from.Col - to.Col) == 2)
+                    // En Passant handling
+                    // Reset EnPassantEligible for all pawns
+                    foreach (var row in Board.Squares)
                     {
-                        int rookFromCol = to.Col == 6 ? 7 : 0;
-                        int rookToCol = to.Col == 6 ? 5 : 3;
-                        var castlingRook = Board.Squares[from.Row][rookFromCol] as Rook;
-
-                        if (castlingRook != null)
+                        foreach (var p in row)
                         {
-                            Board.Squares[from.Row][rookToCol] = castlingRook;
-                            Board.Squares[from.Row][rookFromCol] = null;
-                            castlingRook.Position = (from.Row, rookToCol);
-                            castlingRook.HasMoved = true;
+                            if (p is Pawn pwn)
+                            {
+                                pwn.EnPassantEligible = false;
+                            }
                         }
                     }
+
+                    if (Math.Abs(to.Row - from.Row) == 2)
+                    {
+                        movingPawn.EnPassantEligible = true;
+                    }
+
+                    movingPawn.HasMoved = true;
                 }
 
-                // Handle En Passant capture
-                if (piece is Pawn movingPawn && capturedPiece == null && from.Col != to.Col)
+                if (piece is Rook movingRook)
                 {
-                    int capturedPawnRow = IsWhiteTurn ? to.Row + 1 : to.Row - 1;
-                    var enPassantCapturedPawn = Board.Squares[capturedPawnRow][to.Col] as Pawn;
-                    if (enPassantCapturedPawn != null && enPassantCapturedPawn.EnPassantEligible)
-                    {
-                        Board.Squares[capturedPawnRow][to.Col] = null;
-                        logger.LogInformation($"En Passant capture performed on ({capturedPawnRow}, {to.Col}).");
-                    }
+                    movingRook.HasMoved = true;
+                }
+
+                if (piece is King movingKing)
+                {
+                    movingKing.HasMoved = true;
                 }
 
                 // Check for pawn promotion
@@ -124,13 +142,13 @@ namespace ChessAI.Models
                 }
 
                 // Check for checkmate or stalemate
-                if (Board.isKingInCheck(!IsWhiteTurn))
+                if (Board.IsKingInCheck(!IsWhiteTurn))
                 {
                     if (!Board.AreAnyMovesAvailable(!IsWhiteTurn))
                     {
                         // Checkmate
                         IsGameOver = true;
-                        GameResult = IsWhiteTurn ? "White wins by checkmate." : "Black wins by checkmate.";
+                        GameResult = IsWhiteTurn ? "Checkmate! White Wins!" : "Checkmate! Black Wins!";
                         logger.LogInformation($"Checkmate! {(IsWhiteTurn ? "White" : "Black")} wins.");
                         // Handle victory condition
                     }
@@ -152,26 +170,13 @@ namespace ChessAI.Models
                 }
 
                 IsWhiteTurn = !IsWhiteTurn;
+
                 return true;
             }
             else
             {
                 logger.LogInformation($"Move to ({to.Row}, {to.Col}) is not valid for piece at ({from.Row}, {from.Col}).");
                 return false;
-            }
-        }
-
-        private void ResetEnPassantEligibility()
-        {
-            foreach (var row in Board.Squares)
-            {
-                foreach (var p in row)
-                {
-                    if (p is Pawn pawn)
-                    {
-                        pawn.EnPassantEligible = false;
-                    }
-                }
             }
         }
 
