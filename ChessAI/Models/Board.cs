@@ -72,9 +72,9 @@ namespace ChessAI.Models
             return row >= 0 && row < 8 && col >= 0 && col < 8;
         }
 
-        public bool isKingInCheck(bool isWhite)
+        public bool IsKingInCheck(bool isWhite)
         {
-            (int Row, int Col) kingPosition = findKingPosition(isWhite);
+            (int Row, int Col) kingPosition = FindKingPosition(isWhite);
             return IsSquareUnderAttack(kingPosition.Row, kingPosition.Col, !isWhite);
         }
 
@@ -97,7 +97,7 @@ namespace ChessAI.Models
             return false;
         }
 
-        public (int Row, int Col) findKingPosition(bool isWhite)
+        public (int Row, int Col) FindKingPosition(bool isWhite)
         {
             for (int row = 0; row < 8; row++)
             {
@@ -115,7 +115,7 @@ namespace ChessAI.Models
         public bool IsStalemate(bool isWhite)
         {
             // First, check if the king is in check. If it is, it's not a stalemate.
-            if (isKingInCheck(isWhite))
+            if (IsKingInCheck(isWhite))
             {
                 return false;
             }
@@ -179,7 +179,7 @@ namespace ChessAI.Models
                             piece.Position = move;
 
                             // Check if own king is in check
-                            bool isInCheck = isKingInCheck(isWhite);
+                            bool isInCheck = IsKingInCheck(isWhite);
 
                             // Undo the move
                             Squares[originalPosition.Row][originalPosition.Col] = piece;

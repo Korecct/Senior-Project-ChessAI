@@ -3,24 +3,30 @@ html {
 }
 
 @media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    html {
+        font-size: 16px;
+    }
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+/* Focus Styles for Interactive Elements */
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
 html {
-  position: relative;
-  min-height: 100%;
+    position: relative;
+    min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
 }
 
+/* Chess Board Container */
 .chess-board-container {
     display: flex;
     justify-content: center;
@@ -29,6 +35,7 @@ body {
     padding-top: 5px;
 }
 
+/* Chess Board Styles */
 .chess-board {
     --board-size: 90vmin; /* Board size variable */
     width: var(--board-size);
@@ -53,11 +60,11 @@ body {
 }
 
 .black {
-    background-color: #769656;
+    background-color: #a16868;
 }
 
 .white {
-    background-color: #eeeed2;
+    background-color: #a290ff;
 }
 
 .chess-piece {
@@ -65,13 +72,14 @@ body {
     font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
     user-select: none;
     position: absolute; /* Position absolute relative to parent chess-square */
+    left: 0;
+    top: 0;
     width: 100%;
     height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    left: 0; /* Ensure the piece starts at the top-left of the square */
-    top: 0;
+    transition: transform 0.5s ease-in-out;
 }
 
 .chess-square.highlight::after {
@@ -83,8 +91,67 @@ body {
     border-radius: 50%;
     top: 40%;
     left: 40%;
+    animation: pulse 2s infinite;
 }
 
+/* Pulse Animation */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1.0;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1.0;
+    }
+}
+
+.gamemode-button {
+    display: inline-block;
+    flex: 1 1 calc(33.3% - 30px);
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #007BFF;
+    color: white;
+    box-shadow: 0px 4px 4px 0px #000;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+    .gamemode-button:hover {
+        background-color: #0056b3;
+    }
+
+    .gamemode-button.active {
+        background-color: #665aa4;
+        box-shadow: 0px 6px 6px 0px #000;
+    }
+
+/* Game Mode Indicator */
+.game-mode-indicator {
+    margin-bottom: 0px;
+    padding: 10px 20px;
+    background-color: #f0f0f0;
+    border: 2px solid #a290ff;
+    font-size: 18px;
+    font-weight: bold;
+    width: fit-content;
+    border-radius: 5px;
+}
+
+    .game-mode-indicator strong {
+        color: #f00;
+    }
+
+/* Navigate Button */
 .navigate-button {
     margin-top: 20px; /* Spacing above the button */
     padding: 10px 20px;
@@ -100,22 +167,132 @@ body {
         background-color: #0056b3;
     }
 
-.gamemode-button-contatiner {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-    align-items: center;
+/* Selected AI Cue Styles */
+.selected-ai-cue {
+    margin-top: 10px;
+    font-size: 1.2em;
+    color: #333;
 }
 
-.gamemode-button {
-    display: inline-block;
-    flex: 1 1 calc(33.3% - 30px);
-    margin-top: 20px;
+/* AI Selection Container */
+.ai-selection-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* AI Select Dropdown */
+#aiSelect {
+    padding: 8px 12px;
+    font-size: 16px;
+    border: 2px solid #a290ff;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #333;
+    cursor: pointer;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+    #aiSelect:hover {
+        border-color: #7b6cc5;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+/* Start Game Button */
+button[type="button"] {
     padding: 10px 20px;
     font-size: 16px;
-    background-color: #007BFF;
+    background-color: #a290ff;
     color: white;
-    box-shadow: 0px 4px 4px 0px #000;
-    cursor: pointer;
+    border: none;
     border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
 }
+
+    button[type="button"]:hover {
+        background-color: #7b6cc5;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+
+    .selected-ai-cue span {
+        margin-right: 5px;
+    }
+
+/* Disabled Chessboard Overlay Styles */
+.chess-board.disabled {
+    pointer-events: none;
+    opacity: 0.5;
+    position: relative;
+    z-index:1
+}
+
+    .chess-board.disabled::after {
+        content: "Select an AI to start playing.";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(255, 255, 255, 0.9);
+        padding: 10px 20px;
+        border-radius: 5px;
+        color: black;
+        font-weight: bold;
+        z-index: 2; 
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    }
+
+.game-result-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.game-result-content {
+    background-color: #fff;
+    padding: 20px 40px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.game-result-message {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    display: block;
+}
+
+.game-result-content button {
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    border: none;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 4px;
+}
+
+    .game-result-content button:hover {
+        background-color: #45a049;
+    }
+
+    .game-result-content button.close-button {
+        background-color: #f44336;
+    }
+
+        .game-result-content button.close-button:hover {
+            background-color: #da190b;
+        }

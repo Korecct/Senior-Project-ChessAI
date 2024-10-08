@@ -1,4 +1,5 @@
 using ChessAI.Models;
+using ChessAI.Models.AIs;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
@@ -26,7 +27,6 @@ namespace ChessAI.Controllers
         [HttpGet]
         public IActionResult Play()
         {
-
             // Test session availability
             HttpContext.Session.SetString("Test", "Session is working");
             var testValue = HttpContext.Session.GetString("Test");
@@ -43,7 +43,32 @@ namespace ChessAI.Controllers
                 HttpContext.Session.SetObjectAsJson("Game", game);
             }
 
-            return View(game);
+            // Retrieve game mode
+            var gameMode = HttpContext.Session.GetString("GameMode") ?? "PvP";
+
+            // Pass SelectedAI to the view
+            var selectedAI = HttpContext.Session.GetString("SelectedAI");
+            ViewBag.SelectedAI = selectedAI;
+
+            // Create a ViewModel to pass both game and game mode
+            var viewModel = new PlayViewModel
+            {
+                Game = game,
+                GameMode = gameMode,
+                SelectedAI = selectedAI
+            };
+
+            return View(viewModel);
+        }
+
+        // Not ideal, needs to simply reset the board not redirect, fix later
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RestartGame()
+        {
+            HttpContext.Session.Clear();
+            return RedirectToAction("Play");
         }
 
         [HttpPost]
@@ -65,11 +90,35 @@ namespace ChessAI.Controllers
             }
 
             // Track game state changes
-            bool wasInCheckBeforeMove = game.Board.isKingInCheck(game.IsWhiteTurn);
+            bool wasInCheckBeforeMove = game.Board.IsKingInCheck(game.IsWhiteTurn);
             bool wasInCheckAfterMove = false;
             bool isCapture = game.Board.Squares[move.ToRow][move.ToCol] != null;
             bool isPromotion = false;
             bool isCastle = false;
+            bool isEnPassantCapture = false;
+
+            var piece = game.Board.Squares[move.FromRow][move.FromCol];
+
+            // Detect En Passant capture
+            if (piece is Pawn pawn)
+            {
+                if (move.ToCol != move.FromCol && game.Board.Squares[move.ToRow][move.ToCol] == null)
+                {
+                    isEnPassantCapture = true;
+                }
+            }
+
+            // Detect Castling
+            if (piece is King king && Math.Abs(move.ToCol - move.FromCol) == 2)
+            {
+                isCastle = true;
+            }
+
+            // Detect Promotion
+            if (piece is Pawn && ((piece.IsWhite && move.ToRow == 0) || (!piece.IsWhite && move.ToRow == 7)))
+            {
+                isPromotion = true;
+            }
 
             var success = game.MakeMove((move.FromRow, move.FromCol), (move.ToRow, move.ToCol), _logger);
             if (!success)
@@ -79,34 +128,113 @@ namespace ChessAI.Controllers
             }
 
             // Checks if the opponent is now in check
-            wasInCheckAfterMove = game.Board.isKingInCheck(!game.IsWhiteTurn);
-
-            // Checks for pawn promotion
-            if (game.Board.Squares[move.ToRow][move.ToCol] is Pawn pawn && (move.ToRow == 0 || move.ToRow == 7))
-            {
-                isPromotion = true;
-            }
-
-            // Checks for castling
-            if (Math.Abs(move.FromCol - move.ToCol) == 2 && game.Board.Squares[move.ToRow][move.ToCol] is King)
-            {
-                isCastle = true;
-            }
+            wasInCheckAfterMove = game.Board.IsKingInCheck(!game.IsWhiteTurn);
 
             HttpContext.Session.SetObjectAsJson("Game", game);
 
             // Prepare response with game state
-            var response = new
+            var response = new MoveResponse
             {
-                success = true,
-                isGameOver = game.IsGameOver,
-                gameResult = game.GameResult,
-                isCheckmate = game.IsGameOver && game.GameResult.Contains("wins"),
-                isCheck = wasInCheckAfterMove,
-                isCapture = isCapture,
-                isPromotion = isPromotion,
-                isCastle = isCastle
+                Success = true,
+                IsGameOver = game.IsGameOver,
+                GameResult = game.GameResult,
+                PlayerIsCheckmate = game.IsGameOver && game.GameResult.Contains("wins"),
+                PlayerIsCheck = wasInCheckAfterMove,
+                PlayerIsCapture = isCapture,
+                PlayerIsPromotion = isPromotion,
+                PlayerIsCastle = isCastle,
+                PlayerIsEnPassantCapture = isEnPassantCapture,
+                AIMove = null,
+                AIIsCheckmate = false,
+                AIIsCheck = false,
+                AIIsCapture = false,
+                AIIsPromotion = false,
+                AIIsCastle = false,
+                AIIsEnPassantCapture = false
             };
+
+            // After player's move, check if it's AI's turn
+            var gameMode = HttpContext.Session.GetString("GameMode");
+            if (gameMode == "PvAI" && !game.IsWhiteTurn && !game.IsGameOver)
+            {
+                var aiName = HttpContext.Session.GetString("SelectedAI");
+                if (!string.IsNullOrEmpty(aiName))
+                {
+                    var aiPlayer = AIFactory.GetAIByName(aiName);
+                    if (aiPlayer != null)
+                    {
+                        var aiMove = aiPlayer.GetNextMove(game);
+
+                        var aiPiece = game.Board.Squares[aiMove.From.Row][aiMove.From.Col];
+
+                        // Detect AI En Passant and Castling
+                        bool aiIsEnPassantCapture = false;
+                        bool aiIsCastle = false;
+
+                        // Detect En Passant capture
+                        if (aiPiece is Pawn aiPawn)
+                        {
+                            if (aiMove.To.Col != aiMove.From.Col && game.Board.Squares[aiMove.To.Row][aiMove.To.Col] == null)
+                            {
+                                aiIsEnPassantCapture = true;
+                            }
+                        }
+
+                        // Detect Castling
+                        if (aiPiece is King aiKing && Math.Abs(aiMove.To.Col - aiMove.From.Col) == 2)
+                        {
+                            aiIsCastle = true;
+                        }
+
+                        // Check if AI move is a capture before making the move
+                        bool aiIsCapture = game.Board.Squares[aiMove.To.Row][aiMove.To.Col] != null;
+
+                        // Detect Promotion
+                        bool aiIsPromotion = false;
+                        if (aiPiece is Pawn && ((aiPiece.IsWhite && aiMove.To.Row == 0) || (!aiPiece.IsWhite && aiMove.To.Row == 7)))
+                        {
+                            aiIsPromotion = true;
+                        }
+
+                        var aiSuccess = game.MakeMove(
+                            (aiMove.From.Row, aiMove.From.Col),
+                            (aiMove.To.Row, aiMove.To.Col),
+                            _logger
+                        );
+
+                        if (!aiSuccess)
+                        {
+                            _logger.LogWarning("AI attempted an invalid move.");
+                            return BadRequest("AI attempted an invalid move.");
+                        }
+
+                        // Update session with the new game state after AI moved
+                        HttpContext.Session.SetObjectAsJson("Game", game);
+
+                        // Determine AI move effects
+                        bool aiIsCheckmate = game.IsGameOver && game.GameResult.Contains("wins");
+                        bool aiIsCheck = game.Board.IsKingInCheck(!game.IsWhiteTurn);
+
+                        response.AIMove = new AIMoveResponse
+                        {
+                            From = new PositionModel { Row = aiMove.From.Row, Col = aiMove.From.Col },
+                            To = new PositionModel { Row = aiMove.To.Row, Col = aiMove.To.Col }
+                        };
+                        response.AIIsCheckmate = aiIsCheckmate;
+                        response.AIIsCheck = aiIsCheck;
+                        response.AIIsCapture = aiIsCapture;
+                        response.AIIsPromotion = aiIsPromotion;
+                        response.AIIsCastle = aiIsCastle;
+                        response.AIIsEnPassantCapture = aiIsEnPassantCapture;
+
+
+                        // Update IsGameOver and GameResult in case the AIs move ended the game
+                        response.IsGameOver = game.IsGameOver;
+                        response.GameResult = game.GameResult;
+                    }
+                }
+            }
+            response.IsWhiteTurn = game.IsWhiteTurn;
 
             return Json(response);
         }
@@ -145,7 +273,7 @@ namespace ChessAI.Controllers
                 piece.Position = (move.Row, move.Col);
 
                 // Check if own king is in check
-                bool isInCheck = game.Board.isKingInCheck(piece.IsWhite);
+                bool isInCheck = game.Board.IsKingInCheck(piece.IsWhite);
 
                 // Undo the move
                 game.Board.Squares[originalPosition.Row][originalPosition.Col] = piece;
@@ -160,6 +288,48 @@ namespace ChessAI.Controllers
 
             // Return the valid moves as JSON with camelCase property names
             return Json(safeMoves);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SelectAI([FromBody] AISelectionRequest request)
+        {
+            var aiPlayer = AIFactory.GetAIByName(request.AIName);
+            if (aiPlayer != null)
+            {
+                HttpContext.Session.SetString("SelectedAI", aiPlayer.Name);
+                // Sets the game mode to PvAI since AI is selected
+                HttpContext.Session.SetString("GameMode", "PvAI");
+                // Reset the game when selecting AI
+                var newGame = new Game();
+                HttpContext.Session.SetObjectAsJson("Game", newGame);
+                return Ok();
+            }
+            return BadRequest("AI not found.");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SetGameMode([FromBody] GameModeRequest request)
+        {
+            var validModes = new[] { "Tutorial", "PvP", "PvAI" };
+            if (validModes.Contains(request.GameMode))
+            {
+                HttpContext.Session.SetString("GameMode", request.GameMode);
+
+                // Reset the game when changing game mode
+                var newGame = new Game();
+                HttpContext.Session.SetObjectAsJson("Game", newGame);
+
+                // If switching to PvP then remove the selected AI
+                if (request.GameMode == "PvP")
+                {
+                    HttpContext.Session.Remove("SelectedAI");
+                }
+
+                return Ok();
+            }
+            return BadRequest("Invalid game mode.");
         }
 
         public IActionResult Victory()
@@ -180,8 +350,13 @@ namespace ChessAI.Controllers
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return View(new ErrorViewModel
+            {
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            });
         }
+
+        #region Supporting Classes
 
         public class MoveRequest
         {
@@ -196,5 +371,51 @@ namespace ChessAI.Controllers
             public int Row { get; set; }
             public int Col { get; set; }
         }
+
+        public class AISelectionRequest
+        {
+            public required string AIName { get; set; }
+        }
+
+        public class GameModeRequest
+        {
+            public required string GameMode { get; set; }
+        }
+
+        public class PlayViewModel
+        {
+            public required Game Game { get; set; }
+            public required string GameMode { get; set; }
+            public required string SelectedAI { get; set; }
+        }
+
+        public class MoveResponse
+        {
+            public bool Success { get; set; }
+            public bool IsGameOver { get; set; }
+            public required string GameResult { get; set; }
+            public bool IsWhiteTurn { get; set; }
+            public bool PlayerIsCheckmate { get; set; }
+            public bool PlayerIsCheck { get; set; }
+            public bool PlayerIsCapture { get; set; }
+            public bool PlayerIsPromotion { get; set; }
+            public bool PlayerIsCastle { get; set; }
+            public bool PlayerIsEnPassantCapture { get; set; }
+            public required AIMoveResponse AIMove { get; set; }
+            public bool AIIsCheckmate { get; set; }
+            public bool AIIsCheck { get; set; }
+            public bool AIIsCapture { get; set; }
+            public bool AIIsPromotion { get; set; }
+            public bool AIIsCastle { get; set; }
+            public bool AIIsEnPassantCapture { get; set; }
+        }
+
+        public class AIMoveResponse
+        {
+            public required PositionModel From { get; set; }
+            public required PositionModel To { get; set; }
+        }
+
+        #endregion
     }
 }

@@ -36,7 +36,7 @@ namespace ChessAI.Models
                 if (!HasMoved)
                 {
                     int doubleForwardRow = Position.Row + 2 * direction;
-                    if (board.IsWithinBounds(doubleForwardRow, Position.Col) && board.IsEmpty(doubleForwardRow, Position.Col))
+                    if (board.IsWithinBounds(doubleForwardRow, Position.Col) && board.IsEmpty(doubleForwardRow, Position.Col) && board.IsEmpty(forwardRow, Position.Col))
                     {
                         moves.Add((doubleForwardRow, Position.Col));
                     }
@@ -47,16 +47,20 @@ namespace ChessAI.Models
             int[] captureCols = { Position.Col - 1, Position.Col + 1 };
             foreach (int col in captureCols)
             {
-                if (board.IsWithinBounds(forwardRow, col) && board.IsEnemyPiece(forwardRow, col, IsWhite))
+                if (board.IsWithinBounds(forwardRow, col))
                 {
-                    moves.Add((forwardRow, col));
-                }
-                // En Passant capture
-                if (board.IsWithinBounds(Position.Row, col) && board.Squares[Position.Row][col] is Pawn adjacentPawn)
-                {
-                    if (adjacentPawn.IsWhite != IsWhite && adjacentPawn.EnPassantEligible)
+                    // Normal capture
+                    if (board.IsEnemyPiece(forwardRow, col, IsWhite))
                     {
                         moves.Add((forwardRow, col));
+                    }
+                    // En Passant capture
+                    if (board.IsEmpty(forwardRow, col) && board.Squares[Position.Row][col] is Pawn adjacentPawn)
+                    {
+                        if (adjacentPawn.IsWhite != IsWhite && adjacentPawn.EnPassantEligible)
+                        {
+                            moves.Add((forwardRow, col));
+                        }
                     }
                 }
             }
@@ -64,7 +68,6 @@ namespace ChessAI.Models
             return moves;
         }
     }
-
 
     [Serializable]
     public class Rook : Piece
@@ -238,21 +241,57 @@ namespace ChessAI.Models
             }
 
             // Castling
-            if (!HasMoved && !board.isKingInCheck(IsWhite))
+            if (!HasMoved && !board.IsKingInCheck(IsWhite))
             {
                 // Kingside castling
-                if (CanCastle(board, true))
+                if (CanCastle(board, kingside: true))
                 {
                     moves.Add((Position.Row, Position.Col + 2));
                 }
                 // Queenside castling
-                if (CanCastle(board, false))
+                if (CanCastle(board, kingside: false))
                 {
                     moves.Add((Position.Row, Position.Col - 2));
                 }
             }
 
             return moves;
+        }
+
+        private bool CanCastle(Board board, bool kingside)
+        {
+            int row = Position.Row;
+            int col = Position.Col;
+            int direction = kingside ? 1 : -1;
+            int rookCol = kingside ? 7 : 0;
+
+            // Check if the squares between king and rook are empty
+            int startCol = Math.Min(col, rookCol) + 1;
+            int endCol = Math.Max(col, rookCol) - 1;
+
+            for (int c = startCol; c <= endCol; c++)
+            {
+                if (!board.IsEmpty(row, c))
+                {
+                    return false;
+                }
+            }
+
+            // Check if the rook exists and has not moved
+            if (board.Squares[row][rookCol] is Rook rook && rook.IsWhite == IsWhite && !rook.HasMoved)
+            {
+                // Check that the squares the king passes through are not under attack
+                for (int c = col + direction; c != col + 2 * direction; c += direction)
+                {
+                    if (board.IsSquareUnderAttack(row, c, !IsWhite))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+            return false;
         }
 
         public override List<(int Row, int Col)> GetValidMovesIgnoringCheck(Board board)
@@ -281,43 +320,6 @@ namespace ChessAI.Models
             }
 
             return moves;
-        }
-
-        private bool CanCastle(Board board, bool kingSide)
-        {
-            int row = Position.Row;
-            int direction = kingSide ? 1 : -1;
-            int rookCol = kingSide ? 7 : 0;
-
-            // Checks if squares between king and rook are empty
-            int startCol = Math.Min(Position.Col, rookCol) + 1;
-            int endCol = Math.Max(Position.Col, rookCol) - 1;
-
-            for (int col = startCol; col <= endCol; col++)
-            {
-                if (!board.IsEmpty(row, col))
-                {
-                    return false;
-                }
-            }
-
-            // Checks if squares the king passes through are under attack
-            for (int col = Position.Col; col != Position.Col + 2 * direction; col += direction)
-            {
-                if (board.IsSquareUnderAttack(row, col, !IsWhite))
-                {
-                    return false;
-                }
-            }
-
-            // Checks if the rook has moved
-            var rook = board.Squares[row][rookCol] as Rook;
-            if (rook == null || rook.HasMoved)
-            {
-                return false;
-            }
-
-            return true;
         }
     }
 }
