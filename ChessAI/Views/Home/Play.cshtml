@@ -455,7 +455,7 @@
                             capturedPawn.remove();
                         }
                     }
-
+                    
                     // Handle Castling
                     if (data.aiIsCastle) {
                         const isKingsideCastle = to.col > from.col;
@@ -472,6 +472,7 @@
                         }
                     }
 
+                    // Pawn promotion and check sounds do not play when checking the AI, needs fix
                     // Play AI move sound
                     playAIMoveSound(data);
 
@@ -485,6 +486,7 @@
 
         function handleGameOver(gameResult) {
             // Play corresponding sound
+            // Needs sounds for these
             if (gameResult.includes("wins")) {
                 playSound('Victory');
             } else if (gameResult.includes("draw") || gameResult.includes("stalemate")) {
