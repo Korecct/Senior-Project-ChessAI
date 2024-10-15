@@ -1,5 +1,6 @@
 using ChessAI.Models;
 using ChessAI.Models.AIs;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
@@ -16,6 +17,8 @@ namespace ChessAI.Controllers
 
         public IActionResult Index()
         {
+            var dm = Request.Cookies["dm"];
+            ViewBag.DarkMode = dm == "true";
             return View();
         }
 

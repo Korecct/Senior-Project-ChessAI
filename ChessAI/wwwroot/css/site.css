@@ -24,6 +24,27 @@ html {
 
 body {
     margin-bottom: 60px;
+    /*Added for dark mode transition*/
+    background-color: white;
+    color: black;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+label{
+    color: black;
+}
+
+/*Darkmode body*/
+body.dm{
+    background-color: rgba(0, 0, 0, 0.9);
+    color: rgb(255, 255, 255);
+}
+
+/*Darkmode Button Styles*/
+dm-switch {
+    margin: 15px;
+    padding: 15px;
+    cursor: pointer;
 }
 
 /* Chess Board Container */
@@ -139,7 +160,7 @@ body {
 .game-mode-indicator {
     margin-bottom: 0px;
     padding: 10px 20px;
-    background-color: #f0f0f0;
+    background-color: #a16868;
     border: 2px solid #a290ff;
     font-size: 18px;
     font-weight: bold;
@@ -148,7 +169,7 @@ body {
 }
 
     .game-mode-indicator strong {
-        color: #f00;
+        color: #a290ff;
     }
 
 /* Navigate Button */
@@ -181,7 +202,8 @@ body {
     align-items: center;
     gap: 15px;
     padding: 10px;
-    background-color: #f8f9fa;
+    border: 2px solid #a290ff;
+    background-color: #a16868;
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
