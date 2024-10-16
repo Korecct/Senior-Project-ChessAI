@@ -145,16 +145,67 @@ namespace ChessAI.Models
                 }
             }
 
-            // If only kings are left, it's a stalemate
-            if (whitePiecesCount == 1 && blackPiecesCount == 1)
+            return !AreAnyMovesAvailable(isWhite);
+        }
+
+        public bool IsInsufficientMaterial()
+        {
+            List<Piece> whitePieces = new List<Piece>();
+            List<Piece> blackPieces = new List<Piece>();
+
+            foreach (var row in Squares)
+            {
+                foreach (var piece in row)
+                {
+                    if (piece != null)
+                    {
+                        if (piece.IsWhite)
+                        {
+                            whitePieces.Add(piece);
+                        }
+                        else
+                        {
+                            blackPieces.Add(piece);
+                        }
+                    }
+                }
+            }
+
+            // Remove kings from the lists
+            whitePieces.RemoveAll(p => p is King);
+            blackPieces.RemoveAll(p => p is King);
+
+            // King vs King
+            if (whitePieces.Count == 0 && blackPieces.Count == 0)
             {
                 return true;
             }
 
-            // Check if there are any legal moves available
-            return !AreAnyMovesAvailable(isWhite);
-        }
+            // King and Bishop or Knight vs King
+            if ((whitePieces.Count == 1 && (whitePieces[0] is Bishop || whitePieces[0] is Knight) && blackPieces.Count == 0) ||
+                (blackPieces.Count == 1 && (blackPieces[0] is Bishop || blackPieces[0] is Knight) && whitePieces.Count == 0))
+            {
+                return true;
+            }
 
+            // King and Bishop vs. King and Bishop with bishops on the same color
+            if (whitePieces.Count == 1 && blackPieces.Count == 1 &&
+                whitePieces[0] is Bishop && blackPieces[0] is Bishop)
+            {
+                var whiteBishop = (Bishop)whitePieces[0];
+                var blackBishop = (Bishop)blackPieces[0];
+
+                bool whiteBishopOnLightSquare = (whiteBishop.Position.Row + whiteBishop.Position.Col) % 2 == 0;
+                bool blackBishopOnLightSquare = (blackBishop.Position.Row + blackBishop.Position.Col) % 2 == 0;
+
+                if (whiteBishopOnLightSquare == blackBishopOnLightSquare)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         public bool AreAnyMovesAvailable(bool isWhite)
         {

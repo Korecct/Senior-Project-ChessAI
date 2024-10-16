@@ -10,90 +10,112 @@
 <body>
     <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
 
-    <div class="chess-board-container">
-        <!-- GameMode Indicator -->
-        <div class="game-mode-indicator">
-            <span>Current Mode:</span>
-            <strong>@Model.GameMode</strong>
-            @if (Model.GameMode == "PvAI" && !string.IsNullOrEmpty(Model.SelectedAI))
-            {
-                <span> - AI: <strong>@Model.SelectedAI</strong></span>
-            }
-        </div>
-
-        <!-- GameResult Modal -->
-        <div id="gameResultModal" class="game-result-modal" style="display: none;">
-            <div class="game-result-content">
-                <span id="gameResultMessage" class="game-result-message"></span>
-                <div class="modal-buttons">
-                    <button type="button" class="restart-button" onclick="restartGame()">Restart</button>
-                    <button type="button" class="close-button" onclick="closeGameResultModal()">Close</button>
+    <div class="main-container">
+        <div class="chess-board-container">
+            <!-- GameResult Modal -->
+            <div id="gameResultModal" class="game-result-modal" style="display: none;">
+                <div class="game-result-content">
+                    <span id="gameResultMessage" class="game-result-message"></span>
+                    <div class="modal-buttons">
+                        <button type="button" class="restart-button" onclick="restartGame()">Restart</button>
+                        <button type="button" class="close-button" onclick="closeGameResultModal()">Close</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-
-        <!-- AI Selection UI (only visible in PvAI mode) -->
-        @if (Model.GameMode == "PvAI")
-        {
-
-            <div class="ai-selection-container">
-                <label for="aiSelect">Choose AI:</label>
-                <select id="aiSelect" name="aiSelect">
-                    <option value="">-- Select an AI --</option>
-                    @foreach (var ai in AIFactory.GetAllAIPlayers())
-                    {
-                        <option value="@ai.Name">@ai.Name</option>
-                    }
-                </select>
-                <button type="button" onclick="selectAIAndStartGame()">Start Game</button>
-                <button type="button" onclick="setGameMode('PvAI')">Restart</button>
-            </div>
-        }
-
-        <!-- PvP Selection UI (only visible in PvP mode) -->
-        @if (Model.GameMode == "PvP")
-        {
-            <div class="ai-selection-container">
-                <button type="button" onclick="setGameMode('PvP')">Restart</button>
-            </div>
-        }
-
-        <div class="chess-board @(Model.GameMode == "PvAI" && string.IsNullOrEmpty(ViewBag.SelectedAI) ? "disabled" : "")" id="chessBoard">
-            @for (int row = 0; row < 8; row++)
-            {
-                @for (int col = 0; col < 8; col++)
+            <div class="chess-board @(Model.GameMode == "PvAI" && string.IsNullOrEmpty(ViewBag.SelectedAI) ? "disabled" : "")" id="chessBoard">
+                @for (int row = 0; row < 8; row++)
                 {
-                    var isBlack = (row + col) % 2 == 0;
-                    var className = isBlack ? "black" : "white";
-                    var piece = Model.Game.Board.Squares[row][col];
-                    var pieceSymbol = "";
-                    if (piece != null)
+                    @for (int col = 0; col < 8; col++)
                     {
-                        pieceSymbol = GetPieceSymbol(piece);
-                    }
-                    <div class="chess-square @className"
-                         data-row="@row" data-col="@col"
-                         onclick="squareClick(event)">
-                        @if (!string.IsNullOrEmpty(pieceSymbol))
+                        var isBlack = (row + col) % 2 == 0;
+                        var className = isBlack ? "black" : "white";
+                        var piece = Model.Game.Board.Squares[row][col];
+                        var pieceSymbol = "";
+                        if (piece != null)
                         {
-                            <div class="chess-piece"
-                                 data-piece="@pieceSymbol" data-row="@row" data-col="@col"
-                                 data-piece-type="@piece.GetType().Name"
-                                 data-piece-color="@(piece.IsWhite ? "white" : "black")"
-                                 onmousedown="pieceMouseDown(event)">
-                                @pieceSymbol
-                            </div>
+                            pieceSymbol = GetPieceSymbol(piece);
                         }
-                    </div>
+                        <div class="chess-square @className"
+                             data-row="@row" data-col="@col"
+                             onclick="squareClick(event)">
+                            @if (!string.IsNullOrEmpty(pieceSymbol))
+                            {
+                                <div class="chess-piece @(piece.IsWhite ? "white-piece" : "black-piece")"
+                                     data-piece="@pieceSymbol" data-row="@row" data-col="@col"
+                                     data-piece-type="@piece.GetType().Name"
+                                     data-piece-color="@(piece.IsWhite ? "white" : "black")"
+                                     onmousedown="pieceMouseDown(event)">
+                                    @pieceSymbol
+                                </div>
+                            }
+                        </div>
+                    }
                 }
-            }
+            </div>
         </div>
 
-        <div class="gamemode-button-container">
-            <button type="button" class="gamemode-button @(Model.GameMode == "Tutorial" ? "active" : "")" name="Tutorial" onclick="setGameMode('Tutorial')">Tutorial</button>
-            <button type="button" class="gamemode-button @(Model.GameMode == "PvP" ? "active" : "")" name="PvP" onclick="setGameMode('PvP')">Player vs Player</button>
-            <button type="button" class="gamemode-button @(Model.GameMode == "PvAI" ? "active" : "")" name="PvAI" onclick="setGameMode('PvAI')">Player vs AI</button>
+        <div class="side-panel">
+            <!-- GameMode Indicator -->
+            <div class="game-mode-indicator">
+                <span>Current Mode:</span>
+                <strong>@Model.GameMode<br /></strong>
+                @if (Model.GameMode == "PvAI" && !string.IsNullOrEmpty(Model.SelectedAI))
+                {
+                    <span>AI: <strong>@Model.SelectedAI</strong></span>
+                }
+            </div>
+
+            <!-- Turn Indicator -->
+            <div class="turn-mode-indicator" id="turnIndicator">
+                @if (Model.Game.IsGameOver)
+                {
+                    <span>Game Over</span>
+                }
+                else
+                {
+                    <span>It's <strong>@(Model.IsWhiteTurn ? "White's" : "Black's")</strong> turn.</span>
+                    @if (Model.IsWhiteKingInCheck)
+                    {
+                        <div class="check-indicator">White king is in check!</div>
+                    }
+                    @if (Model.IsBlackKingInCheck)
+                    {
+                        <div class="check-indicator">Black king is in check!</div>
+                    }
+                }
+            </div>
+
+            <!-- AI Selection UI (only visible in PvAI mode) -->
+            @if (Model.GameMode == "PvAI")
+            {
+                <div class="ai-selection-container">
+                    <label for="aiSelect">Choose AI:</label>
+                    <select id="aiSelect" name="aiSelect">
+                        <option value="">-- Select an AI --</option>
+                        @foreach (var ai in AIFactory.GetAllAIPlayers())
+                        {
+                            <option value="@ai.Name">@ai.Name</option>
+                        }
+                    </select>
+                    <button type="button" class="ai-button" onclick="selectAIAndStartGame()">Start Game</button>
+                    <button type="button" class="ai-button" onclick="setGameMode('PvAI')">Restart</button>
+                </div>
+            }
+
+            <!-- PvP Selection UI (only visible in PvP mode) -->
+            @if (Model.GameMode == "LocalPvP")
+            {
+                <div class="ai-selection-container">
+                    <button type="button" class="ai-button" onclick="setGameMode('LocalPvP')">Restart</button>
+                </div>
+            }
+
+            <div class="gamemode-button-container">
+                <button type="button" class="gamemode-button @(Model.GameMode == "Tutorial" ? "active" : "")" name="Tutorial" onclick="setGameMode('Tutorial')">Tutorial</button>
+                <button type="button" class="gamemode-button @(Model.GameMode == "LocalPvP" ? "active" : "")" name="Local PvP" onclick="setGameMode('LocalPvP')">Local PvP</button>
+                <button type="button" class="gamemode-button @(Model.GameMode == "PvAI" ? "active" : "")" name="PvAI" onclick="setGameMode('PvAI')">PvAI</button>
+            </div>
         </div>
     </div>
 
@@ -256,6 +278,24 @@
             }
         }
 
+        function updateTurnIndicator(isWhiteTurn, isWhiteKingInCheck, isBlackKingInCheck, isGameOver, message) {
+            const turnIndicator = document.getElementById('turnIndicator');
+            if (isGameOver) {
+                turnIndicator.innerHTML = '<span>Game Over</span>';
+            } else if (message) {
+                turnIndicator.innerHTML = `<span>${message}</span>`;
+            } else {
+                let html = `<span>It's <strong>${isWhiteTurn === true ? "White's" : "Black's"}</strong> turn.</span>`;
+                if (isWhiteKingInCheck) {
+                    html += '<div class="check-indicator">White king is in check!</div>';
+                }
+                if (isBlackKingInCheck) {
+                    html += '<div class="check-indicator">Black king is in check!</div>';
+                }
+                turnIndicator.innerHTML = html;
+            }
+        }
+
         async function postMove(fromRow, fromCol, toRow, toCol) {
             if (isGameBusy) {
                 return;
@@ -292,21 +332,25 @@
                         return;
                     }
 
-                    isWhiteTurn = data.isWhiteTurn.toString();
-
                     // handle AI movement if exists
                     if (data.aiMove) {
-                        // Adds a delay before AI moves
+                        // Update the turn indicator to show that it's the AI's turn
+                        updateTurnIndicator(null, null, null, false, "AI is thinking...");
+
+                        // Delay before AI moves
                         setTimeout(() => {
-                            // Animate the AI's move (broken)
+                            // Animate the AI's move
                             makeAIMove(data.aiMove.from, data.aiMove.to, data);
+
+                            updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
 
                             // After AI's move is done, allow player interaction
                             isGameBusy = false;
 
                         }, 1000); // Delay 1 second before AI moves
                     } else {
-                        
+                        // No AI move, update the turn indicator
+                        updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
                         isGameBusy = false;
                     }
 

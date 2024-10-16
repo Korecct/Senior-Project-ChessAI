@@ -167,6 +167,13 @@ namespace ChessAI.Models
                         logger.LogInformation("Stalemate. The game is a draw.");
                         // Handle draw condition
                     }
+                    else if (Board.IsInsufficientMaterial())
+                    {
+                        // Draw due to insufficient material
+                        IsGameOver = true;
+                        GameResult = "Draw due to insufficient material.";
+                        logger.LogInformation("Draw due to insufficient material.");
+                    }
                 }
 
                 IsWhiteTurn = !IsWhiteTurn;

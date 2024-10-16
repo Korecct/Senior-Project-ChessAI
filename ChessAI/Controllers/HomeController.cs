@@ -1,7 +1,7 @@
 using ChessAI.Models;
 using ChessAI.Models.AIs;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using System.Diagnostics;
 
 namespace ChessAI.Controllers
@@ -13,6 +13,26 @@ namespace ChessAI.Controllers
         public HomeController(ILogger<HomeController> logger)
         {
             _logger = logger;
+        }
+
+        public override void OnActionExecuting(ActionExecutingContext context)
+        {
+            var dm = Request.Cookies["dm"];
+            if (dm == null)
+            {
+                // Set dark mode cookie to true
+                Response.Cookies.Append("dm", "true", new CookieOptions
+                {
+                    Expires = DateTimeOffset.UtcNow.AddYears(1),
+                    Path = "/"
+                });
+                ViewBag.DarkMode = true;
+            }
+            else
+            {
+                ViewBag.DarkMode = dm == "true";
+            }
+            base.OnActionExecuting(context);
         }
 
         public IActionResult Index()
@@ -47,7 +67,7 @@ namespace ChessAI.Controllers
             }
 
             // Retrieve game mode
-            var gameMode = HttpContext.Session.GetString("GameMode") ?? "PvP";
+            var gameMode = HttpContext.Session.GetString("GameMode") ?? "LocalPvP";
 
             // Pass SelectedAI to the view
             var selectedAI = HttpContext.Session.GetString("SelectedAI");
@@ -58,7 +78,10 @@ namespace ChessAI.Controllers
             {
                 Game = game,
                 GameMode = gameMode,
-                SelectedAI = selectedAI
+                SelectedAI = selectedAI,
+                IsWhiteTurn = game.IsWhiteTurn,
+                IsWhiteKingInCheck = game.Board.IsKingInCheck(true),
+                IsBlackKingInCheck = game.Board.IsKingInCheck(false)
             };
 
             return View(viewModel);
@@ -92,9 +115,10 @@ namespace ChessAI.Controllers
                 return BadRequest("The game is already over.");
             }
 
+            // Capture the current player's color before making the move
+            bool currentPlayerIsWhite = game.IsWhiteTurn;
+
             // Track game state changes
-            bool wasInCheckBeforeMove = game.Board.IsKingInCheck(game.IsWhiteTurn);
-            bool wasInCheckAfterMove = false;
             bool isCapture = game.Board.Squares[move.ToRow][move.ToCol] != null;
             bool isPromotion = false;
             bool isCastle = false;
@@ -131,7 +155,8 @@ namespace ChessAI.Controllers
             }
 
             // Checks if the opponent is now in check
-            wasInCheckAfterMove = game.Board.IsKingInCheck(!game.IsWhiteTurn);
+            bool opponentIsWhite = !currentPlayerIsWhite;
+            bool opponentIsInCheck = game.Board.IsKingInCheck(opponentIsWhite);
 
             HttpContext.Session.SetObjectAsJson("Game", game);
 
@@ -142,7 +167,7 @@ namespace ChessAI.Controllers
                 IsGameOver = game.IsGameOver,
                 GameResult = game.GameResult,
                 PlayerIsCheckmate = game.IsGameOver && game.GameResult.Contains("wins"),
-                PlayerIsCheck = wasInCheckAfterMove,
+                PlayerIsCheck = opponentIsInCheck,
                 PlayerIsCapture = isCapture,
                 PlayerIsPromotion = isPromotion,
                 PlayerIsCastle = isCastle,
@@ -215,8 +240,9 @@ namespace ChessAI.Controllers
                         HttpContext.Session.SetObjectAsJson("Game", game);
 
                         // Determine AI move effects
+                        bool aiOpponentIsWhite = currentPlayerIsWhite;
+                        bool aiOpponentIsInCheck = game.Board.IsKingInCheck(aiOpponentIsWhite);
                         bool aiIsCheckmate = game.IsGameOver && game.GameResult.Contains("wins");
-                        bool aiIsCheck = game.Board.IsKingInCheck(!game.IsWhiteTurn);
 
                         response.AIMove = new AIMoveResponse
                         {
@@ -224,12 +250,11 @@ namespace ChessAI.Controllers
                             To = new PositionModel { Row = aiMove.To.Row, Col = aiMove.To.Col }
                         };
                         response.AIIsCheckmate = aiIsCheckmate;
-                        response.AIIsCheck = aiIsCheck;
+                        response.AIIsCheck = aiOpponentIsInCheck;
                         response.AIIsCapture = aiIsCapture;
                         response.AIIsPromotion = aiIsPromotion;
                         response.AIIsCastle = aiIsCastle;
                         response.AIIsEnPassantCapture = aiIsEnPassantCapture;
-
 
                         // Update IsGameOver and GameResult in case the AIs move ended the game
                         response.IsGameOver = game.IsGameOver;
@@ -238,6 +263,9 @@ namespace ChessAI.Controllers
                 }
             }
             response.IsWhiteTurn = game.IsWhiteTurn;
+
+            response.IsWhiteKingInCheck = game.Board.IsKingInCheck(true);
+            response.IsBlackKingInCheck = game.Board.IsKingInCheck(false);
 
             return Json(response);
         }
@@ -315,7 +343,7 @@ namespace ChessAI.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult SetGameMode([FromBody] GameModeRequest request)
         {
-            var validModes = new[] { "Tutorial", "PvP", "PvAI" };
+            var validModes = new[] { "Tutorial", "LocalPvP", "PvAI" };
             if (validModes.Contains(request.GameMode))
             {
                 HttpContext.Session.SetString("GameMode", request.GameMode);
@@ -325,7 +353,7 @@ namespace ChessAI.Controllers
                 HttpContext.Session.SetObjectAsJson("Game", newGame);
 
                 // If switching to PvP then remove the selected AI
-                if (request.GameMode == "PvP")
+                if (request.GameMode == "LocalPvP")
                 {
                     HttpContext.Session.Remove("SelectedAI");
                 }
@@ -390,6 +418,9 @@ namespace ChessAI.Controllers
             public required Game Game { get; set; }
             public required string GameMode { get; set; }
             public required string SelectedAI { get; set; }
+            public bool IsWhiteTurn { get; set; }
+            public bool IsWhiteKingInCheck { get; set; }
+            public bool IsBlackKingInCheck { get; set; }
         }
 
         public class MoveResponse
@@ -411,6 +442,8 @@ namespace ChessAI.Controllers
             public bool AIIsPromotion { get; set; }
             public bool AIIsCastle { get; set; }
             public bool AIIsEnPassantCapture { get; set; }
+            public bool IsWhiteKingInCheck { get; set; }
+            public bool IsBlackKingInCheck { get; set; }
         }
 
         public class AIMoveResponse
