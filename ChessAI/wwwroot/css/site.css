@@ -1,11 +1,54 @@
 html {
-  font-size: 14px;
+    font-size: 14px;
+    position: relative;
+    min-height: 100%;
 }
 
 @media (min-width: 768px) {
     html {
-        font-size: 16px;
+        font-size: 12px;
     }
+}
+
+/* Body Styles */
+body {
+    margin-bottom: 60px;
+    background: url('../images/background-chess.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: black;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+    /* Background for Glass Blur Effect */
+    body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(20px);
+        z-index: -1;
+    }
+
+    body.dm {
+        color: #ffffff;
+    }
+
+        body.dm::before {
+            background: rgba(18, 18, 18, 0.6);
+            backdrop-filter: blur(20px);
+        }
+
+/* Label Styles */
+label {
+    color: black;
+    transition: color 0.2s;
+}
+
+body.dm label {
+    color: white;
 }
 
 /* Focus Styles for Interactive Elements */
@@ -17,43 +60,152 @@ html {
     box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
-html {
+/* Dark Mode Focus Styles */
+body.dm .btn:focus,
+body.dm .btn:active:focus,
+body.dm .btn-link.nav-link:focus,
+body.dm .form-control:focus,
+body.dm .form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem black, 0 0 0 0.25rem #258cfb;
+}
+
+/* Dark Mode Toggle Switch */
+.dark-mode-toggle {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.switch {
     position: relative;
-    min-height: 100%;
+    display: inline-block;
+    width: 50px;
+    height: 25px;
 }
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
 
-body {
-    margin-bottom: 60px;
-    /*Added for dark mode transition*/
-    background-color: white;
-    color: black;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-label{
-    color: black;
-}
-
-/*Darkmode body*/
-body.dm{
-    background-color: rgba(0, 0, 0, 0.9);
-    color: rgb(255, 255, 255);
-}
-
-/*Darkmode Button Styles*/
-dm-switch {
-    margin: 15px;
-    padding: 15px;
+.slider {
+    position: absolute;
     cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #888;
+    transition: 0.4s;
+    border-radius: 25px;
+    box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 17px;
+        width: 17px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+    }
+
+/* Checked state */
+.switch input:checked + .slider {
+    background-color: #2196F3;
+}
+
+    /* Move the slider when checked */
+    .switch input:checked + .slider:before {
+        transform: translateX(25px);
+    }
+
+/* Ensure switch visibility in both modes */
+body .slider {
+    background-color: #888;
+}
+
+body.dm .slider {
+    background-color: #555;
+}
+
+/* Switch Label */
+.switch-label {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+body.dm .switch-label {
+    color: #fff;
+}
+
+/* Adjustments for Mobile Devices */
+@media (max-width: 576px) {
+    .switch {
+        width: 40px;
+        height: 20px;
+    }
+
+    .slider:before {
+        height: 14px;
+        width: 14px;
+        bottom: 3px;
+    }
+
+    .switch input:checked + .slider:before {
+        transform: translateX(20px);
+    }
+
+    .switch-label {
+        font-size: 0.8rem;
+    }
+}
+
+/* Main Container */
+.main-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 20px;
+    width: 100%;
+    margin-top: 5px;
+    flex-wrap: nowrap;
+}
+
+@media (max-width: 1000px) {
+    .main-container {
+        flex-wrap: wrap;
+    }
 }
 
 /* Chess Board Container */
 .chess-board-container {
     display: flex;
-    justify-content: center;
-    align-items: center;
     flex-direction: column;
-    padding-top: 5px;
+    align-items: center;
+}
+
+.side-panel {
+    width: 200px;
+    flex-shrink: 0;
+}
+
+/* Responsive elements */
+@media (max-width: 768px) {
+    .main-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .side-panel {
+        width: 100%;
+        margin-top: 20px;
+    }
 }
 
 /* Chess Board Styles */
@@ -68,6 +220,11 @@ dm-switch {
     gap: 0;
     border: 2px solid #000;
     position: relative;
+    transition: border-color 0.2s;
+}
+
+body.dm .chess-board {
+    border-color: #ff6262;
 }
 
 .chess-square {
@@ -78,6 +235,7 @@ dm-switch {
     min-height: 0; /* Prevents the square from expanding */
     position: relative; /* Set to relative to position pieces absolutely within */
     user-select: none;
+    transition: background-color 0.2s;
 }
 
 .black {
@@ -88,6 +246,15 @@ dm-switch {
     background-color: #a290ff;
 }
 
+body.dm .black {
+    background-color: #4c3838;
+}
+
+body.dm .white {
+    background-color: #bdbdbd;
+}
+
+/* Chess Piece Styles */
 .chess-piece {
     font-size: calc((var(--board-size) / 8) * 0.7);
     font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
@@ -101,8 +268,28 @@ dm-switch {
     justify-content: center;
     align-items: center;
     transition: transform 0.5s ease-in-out;
+    color: inherit;
 }
 
+    .chess-piece.white-piece {
+        color: #fff;
+    }
+
+    .chess-piece.black-piece {
+        color: #000;
+    }
+
+body.dm .chess-piece.white-piece {
+    color: #f1f1f1;
+    text-shadow: 0 0 2px #210000;
+}
+
+body.dm .chess-piece.black-piece {
+    color: #000;
+    text-shadow: 0 0 2px #ff8383;
+}
+
+/* Highlighted Chess Square */
 .chess-square.highlight::after {
     content: '';
     position: absolute;
@@ -113,6 +300,10 @@ dm-switch {
     top: 40%;
     left: 40%;
     animation: pulse 2s infinite;
+}
+
+body.dm .chess-square.highlight::after {
+    background-color: rgba(40, 0, 0, 0.7);
 }
 
 /* Pulse Animation */
@@ -134,10 +325,10 @@ dm-switch {
 }
 
 .gamemode-button {
-    display: inline-block;
-    flex: 1 1 calc(33.3% - 30px);
-    margin-top: 20px;
-    padding: 10px 20px;
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    padding: 2px 20px;
     font-size: 16px;
     background-color: #007BFF;
     color: white;
@@ -145,6 +336,8 @@ dm-switch {
     cursor: pointer;
     border-radius: 5px;
     transition: background-color 0.3s, box-shadow 0.3s;
+    text-align: center;
+    border: none;
 }
 
     .gamemode-button:hover {
@@ -156,20 +349,72 @@ dm-switch {
         box-shadow: 0px 6px 6px 0px #000;
     }
 
+body.dm .gamemode-button {
+    background-color: #4c3838;
+    color: white;
+    box-shadow: 0px 4px 4px 0px #fff;
+}
+
+    body.dm .gamemode-button:hover {
+        background-color: #3a2a2a;
+    }
+
+    body.dm .gamemode-button.active {
+        background-color: #936262;
+        box-shadow: 0px 6px 6px 0px #fff;
+    }
+
 /* Game Mode Indicator */
 .game-mode-indicator {
-    margin-bottom: 0px;
+    margin-bottom: 10px;
     padding: 10px 20px;
-    background-color: #a16868;
-    border: 2px solid #a290ff;
-    font-size: 18px;
+    background-color: rgba(255, 255, 255, 0.59);
+    border: 2px solid #ff6262;
+    font-size: 14px;
     font-weight: bold;
-    width: fit-content;
+    width: 100%;
     border-radius: 5px;
+    transition: background-color 0.2s, border-color 0.2s;
+    text-align: center;
 }
 
     .game-mode-indicator strong {
         color: #a290ff;
+    }
+
+body.dm .game-mode-indicator {
+    background-color: rgba(85, 85, 85, 0.7);
+    border-color: #ff6262;
+}
+
+    body.dm .game-mode-indicator strong {
+        color: #ff6262;
+    }
+
+.turn-mode-indicator {
+    margin-bottom: 10px;
+    padding: 5px 20px;
+    background-color: rgba(255, 255, 255, 0.59);
+    border: 2px solid #ff6262;
+    font-size: 14px;
+    font-weight: bold;
+    width: 100%;
+    border-radius: 5px;
+    transition: background-color 0.2s, border-color 0.2s;
+    text-align: center;
+}
+
+    .turn-mode-indicator strong {
+        color: #a290ff;
+    }
+
+body.dm .turn-mode-indicator {
+    background-color: rgba(85, 85, 85, 0.7);
+    border-color: #ff6262;
+}
+
+    body.dm .turn-mode-indicator strong {
+        color: #ff6262;
     }
 
 /* Navigate Button */
@@ -182,52 +427,96 @@ dm-switch {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
 }
 
     .navigate-button:hover {
         background-color: #0056b3;
     }
 
+body.dm .navigate-button {
+    background-color: #375a7f;
+    color: white;
+}
+
+    body.dm .navigate-button:hover {
+        background-color: #2c4e6a;
+    }
+
+body.dm .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+body.dm .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255, 255, 255, 0.9)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+}
+
 /* Selected AI Cue Styles */
 .selected-ai-cue {
     margin-top: 10px;
     font-size: 1.2em;
     color: #333;
+    transition: color 0.2s;
 }
 
-/* AI Selection Container */
+    .selected-ai-cue span {
+        margin-right: 5px;
+    }
+
+body.dm .selected-ai-cue {
+    color: #ddd;
+}
+
+/* AI Selection Container Styles */
 .ai-selection-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
+    margin-bottom: 20px;
     padding: 10px;
-    border: 2px solid #a290ff;
-    background-color: #a16868;
+    border: 2px solid #ff6262;
+    background-color: rgba(255, 255, 255, 0.59);
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    text-align: center;
+}
+
+body.dm .ai-selection-container {
+    background-color: rgba(85, 85, 85, 0.7);
+    border-color: #ff6262;
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
 }
 
 /* AI Select Dropdown */
 #aiSelect {
-    padding: 8px 12px;
+    padding: 2px 12px;
     font-size: 16px;
-    border: 2px solid #a290ff;
+    border: 2px solid #ff6262;
     border-radius: 5px;
     background-color: #fff;
     color: #333;
     cursor: pointer;
-    transition: border-color 0.3s, box-shadow 0.3s;
+    transition: border-color 0.3s, box-shadow 0.3s, background-color 0.2s, color 0.2s;
+    width: 100%;
+    margin-bottom: 10px;
 }
 
-    #aiSelect:hover {
-        border-color: #7b6cc5;
+    #aiSelect:hover {#c54c4c
+        border-color: #c54c4c;
         box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
     }
 
+body.dm #aiSelect {
+    background-color: rgba(102, 102, 102, 0.7);
+    color: #ddd;
+}
+
+    body.dm #aiSelect:hover {
+        border-color: #c54c4c;
+        box-shadow: 0px 4px 8px rgba(255, 255, 255, 0.1);
+    }
+
 /* Start Game Button */
-button[type="button"] {
-    padding: 10px 20px;
+button[type="button"].ai-button {
+    padding: 2px 2px;
     font-size: 16px;
     background-color: #a290ff;
     color: white;
@@ -235,16 +524,23 @@ button[type="button"] {
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s, box-shadow 0.3s;
+    width: 100%;
+    margin-bottom: 10px;
 }
 
-    button[type="button"]:hover {
+    button[type="button"].ai-button:hover {
         background-color: #7b6cc5;
         box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
     }
 
+body.dm button[type="button"].ai-button {
+    background-color: #4c3838;
+    color: white;
+}
 
-    .selected-ai-cue span {
-        margin-right: 5px;
+    body.dm button[type="button"].ai-button:hover {
+        background-color: #3a2a2a;
+        box-shadow: 0px 4px 8px rgba(255, 255, 255, 0.1);
     }
 
 /* Disabled Chessboard Overlay Styles */
@@ -252,7 +548,7 @@ button[type="button"] {
     pointer-events: none;
     opacity: 0.5;
     position: relative;
-    z-index:1
+    z-index: 1;
 }
 
     .chess-board.disabled::after {
@@ -266,10 +562,16 @@ button[type="button"] {
         border-radius: 5px;
         color: black;
         font-weight: bold;
-        z-index: 2; 
+        z-index: 2;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     }
 
+body.dm .chess-board.disabled::after {
+    background-color: rgba(50, 50, 50, 0.7);
+    color: white;
+}
+
+/* Game Result Modal Styles */
 .game-result-modal {
     position: fixed;
     top: 0;
@@ -289,6 +591,13 @@ button[type="button"] {
     border-radius: 8px;
     text-align: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+body.dm .game-result-content {
+    background-color: rgba(51, 51, 51, 0.9);
+    color: #fff;
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
 }
 
 .game-result-message {
@@ -305,6 +614,8 @@ button[type="button"] {
     background-color: #4CAF50;
     color: white;
     border-radius: 4px;
+    transition: background-color 0.3s;
+    margin: 5px;
 }
 
     .game-result-content button:hover {
@@ -318,3 +629,128 @@ button[type="button"] {
         .game-result-content button.close-button:hover {
             background-color: #da190b;
         }
+
+body.dm .game-result-content button {
+    background-color: rgba(106, 168, 79, 0.8);
+    color: white;
+}
+
+    body.dm .game-result-content button:hover {
+        background-color: rgba(83, 128, 52, 0.8);
+    }
+
+    body.dm .game-result-content button.close-button {
+        background-color: rgba(224, 102, 102, 0.8);
+    }
+
+        body.dm .game-result-content button.close-button:hover {
+            background-color: rgba(204, 0, 0, 0.8);
+        }
+
+/* Navbar Styles */
+.navbar {
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.navbar-nav .nav-link {
+    padding: 0.5rem 1rem;
+}
+
+body.dm .navbar {
+    background-color: rgba(51, 51, 51, 0.9) !important;
+    border-bottom: 1px solid #444;
+}
+
+    body.dm .navbar .nav-link {
+        color: #fff !important;
+        transition: color 0.2s;
+    }
+
+        body.dm .navbar .nav-link:hover {
+            color: #ddd !important;
+        }
+
+body.dm .navbar-brand {
+    color: #fff !important;
+    transition: color 0.2s;
+}
+
+    body.dm .navbar-brand:hover {
+        color: #ddd !important;
+    }
+
+/* Footer Styles */
+.footer {
+    transition: background-color 0.2s, color 0.2s;
+    background-color: white;
+}
+
+body.dm .footer {
+    background-color: rgba(34, 34, 34, 0.9);
+    color: #ddd;
+}
+
+    body.dm .footer a {
+        color: #4da6ff;
+    }
+
+        body.dm .footer a:hover {
+            color: #66b3ff;
+        }
+
+body.dm .form-control {
+    background-color: rgba(85, 85, 85, 0.7);
+    color: #ddd;
+    border: 1px solid #777;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+    body.dm .form-control:focus {
+        background-color: rgba(102, 102, 102, 0.7);
+        color: #fff;
+        border-color: #4da6ff;
+    }
+
+body.dm select {
+    background-color: rgba(85, 85, 85, 0.7);
+    color: #ddd;
+    border: 1px solid #777;
+}
+
+    body.dm select:focus {
+        background-color: rgba(102, 102, 102, 0.7);
+        color: #fff;
+        border-color: #4da6ff;
+    }
+
+/* Links Dark mode */
+body.dm a {
+    color: #4da6ff;
+    transition: color 0.2s;
+}
+
+    body.dm a:hover {
+        color: #66b3ff;
+    }
+
+body.dm .modal-content {
+    background-color: rgba(68, 68, 68, 0.9);
+    color: #ddd;
+}
+
+body,
+.navbar,
+.footer,
+.dark-mode-toggle,
+.chess-board,
+.chess-piece,
+.gamemode-button,
+.game-mode-indicator,
+.ai-selection-container,
+#aiSelect,
+button[type="button"],
+.game-result-content,
+.form-control,
+.select {
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}

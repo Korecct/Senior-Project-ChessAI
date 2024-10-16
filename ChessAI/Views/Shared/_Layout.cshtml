@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/ChessAI.styles.css" asp-append-version="true" />
 </head>
-<body>
+<body class="@(ViewBag.DarkMode != false ? "dm" : "")">
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
@@ -29,9 +29,16 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Play">Play</a>
                         </li>
                     </ul>
+                    <div class="dark-mode-toggle">
+                        <label class="switch">
+                            <input type="checkbox" id="dm-switch" name="dm-switch" @(ViewBag.DarkMode != false ? "checked" : "") />
+                            <span class="slider round"></span>
+                        </label>
+                        <label class="switch-label" for="dm-switch">
+                            Dark Mode
+                        </label>
+                    </div>
                 </div>
-                <input type="checkbox" id="dm-switch" name="dm-switch" />
-                <label for="dm-switch">Dark Mode</label>
             </div>
         </nav>
     </header>
