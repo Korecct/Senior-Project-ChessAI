@@ -59,10 +59,10 @@
             <!-- GameMode Indicator -->
             <div class="game-mode-indicator">
                 <span>Current Mode:</span>
-                <strong>@Model.GameMode</strong>
+                <strong>@Model.GameMode<br /></strong>
                 @if (Model.GameMode == "PvAI" && !string.IsNullOrEmpty(Model.SelectedAI))
                 {
-                    <span> - AI: <strong>@Model.SelectedAI</strong></span>
+                    <span>AI: <strong>@Model.SelectedAI</strong></span>
                 }
             </div>
 
