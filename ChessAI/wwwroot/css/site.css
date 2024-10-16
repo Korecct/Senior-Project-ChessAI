@@ -43,6 +43,7 @@ body {
 label {
     color: black;
     transition: color 0.2s;
+    font-size: 1.2em;
 }
 
 body.dm label {
@@ -169,17 +170,10 @@ body.dm .switch-label {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    flex-wrap: wrap;
     gap: 20px;
     width: 100%;
     margin-top: 5px;
-    flex-wrap: wrap;
-}
-
-@media (max-width: 800px) {
-    .main-container {
-        flex-wrap: nowrap;
-    }
+    flex-wrap: nowrap;
 }
 
 /* Chess Board Container */
@@ -195,7 +189,7 @@ body.dm .switch-label {
 }
 
 /* Responsive elements */
-@media (max-width: 768px) {
+@media (max-width: 1330px) {
     .main-container {
         flex-direction: column;
         align-items: center;
@@ -203,7 +197,7 @@ body.dm .switch-label {
 
     .side-panel {
         width: 100%;
-        margin-top: 20px;
+        margin-top: 0px;
     }
 }
 
@@ -328,7 +322,7 @@ body.dm .chess-square.highlight::after {
     width: 100%;
     margin-top: 10px;
     padding: 2px 20px;
-    font-size: 2.5vh;
+    font-size: calc(1.8vmin + 0.8vh - 0.4vw);
     background-color: #007BFF;
     color: white;
     box-shadow: 0px 4px 4px 0px #000;
@@ -369,7 +363,7 @@ body.dm .gamemode-button {
     padding: 10px 20px;
     background-color: rgba(255, 255, 255, 0.59);
     border: 2px solid #ff6262;
-    font-size: 2.0vh;
+    font-size: calc(1.4vmin + 0.8vh - 0.4vw);
     font-weight: bold;
     width: 100%;
     border-radius: 5px;
@@ -395,7 +389,7 @@ body.dm .game-mode-indicator {
     padding: 5px 20px;
     background-color: rgba(255, 255, 255, 0.59);
     border: 2px solid #ff6262;
-    font-size: 3.0vh;
+    font-size: calc(1.8vmin + 0.8vh - 0.4vw);
     font-weight: bold;
     width: 100%;
     border-radius: 5px;
@@ -487,7 +481,7 @@ body.dm .ai-selection-container {
 /* AI Select Dropdown */
 #aiSelect {
     padding: 2px 12px;
-    font-size: 2.0vh;
+    font-size: calc(1.5vmin + 0.8vh - 0.4vw);
     border: 2px solid #ff6262;
     border-radius: 5px;
     background-color: #fff;
@@ -516,7 +510,7 @@ body.dm #aiSelect {
 /* Start Game Button */
 button[type="button"].ai-button {
     padding: 2px 2px;
-    font-size: 2.5vh;
+    font-size: calc(1.8vmin + 0.8vh - 0.4vw);
     background-color: #a290ff;
     color: white;
     border: none;
