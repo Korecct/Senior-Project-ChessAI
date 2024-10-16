@@ -1,12 +1,10 @@
 html {
-    font-size: 14px;
     position: relative;
     min-height: 100%;
 }
 
 @media (min-width: 768px) {
     html {
-        font-size: 12px;
     }
 }
 
@@ -49,6 +47,7 @@ label {
 
 body.dm label {
     color: white;
+    font-size: 1.2em;
 }
 
 /* Focus Styles for Interactive Elements */
@@ -191,7 +190,7 @@ body.dm .switch-label {
 }
 
 .side-panel {
-    width: 200px;
+    width: 250px;
     flex-shrink: 0;
 }
 
@@ -329,7 +328,7 @@ body.dm .chess-square.highlight::after {
     width: 100%;
     margin-top: 10px;
     padding: 2px 20px;
-    font-size: 16px;
+    font-size: 1.5vh;
     background-color: #007BFF;
     color: white;
     box-shadow: 0px 4px 4px 0px #000;
@@ -370,7 +369,7 @@ body.dm .gamemode-button {
     padding: 10px 20px;
     background-color: rgba(255, 255, 255, 0.59);
     border: 2px solid #ff6262;
-    font-size: 14px;
+    font-size: 1.5vh;
     font-weight: bold;
     width: 100%;
     border-radius: 5px;
@@ -396,7 +395,7 @@ body.dm .game-mode-indicator {
     padding: 5px 20px;
     background-color: rgba(255, 255, 255, 0.59);
     border: 2px solid #ff6262;
-    font-size: 14px;
+    font-size: 1.5vh;
     font-weight: bold;
     width: 100%;
     border-radius: 5px;
@@ -454,7 +453,7 @@ body.dm .navbar-toggler-icon {
 /* Selected AI Cue Styles */
 .selected-ai-cue {
     margin-top: 10px;
-    font-size: 1.2em;
+    font-size: 1.5em;
     color: #333;
     transition: color 0.2s;
 }
@@ -488,7 +487,7 @@ body.dm .ai-selection-container {
 /* AI Select Dropdown */
 #aiSelect {
     padding: 2px 12px;
-    font-size: 16px;
+    font-size: 1.5vh;
     border: 2px solid #ff6262;
     border-radius: 5px;
     background-color: #fff;
@@ -517,7 +516,7 @@ body.dm #aiSelect {
 /* Start Game Button */
 button[type="button"].ai-button {
     padding: 2px 2px;
-    font-size: 16px;
+    font-size: 1.5vh;
     background-color: #a290ff;
     color: white;
     border: none;
