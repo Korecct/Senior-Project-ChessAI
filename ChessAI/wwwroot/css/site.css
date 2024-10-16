@@ -43,7 +43,7 @@ body {
 label {
     color: black;
     transition: color 0.2s;
-    font-size: 1.2em;
+    font-size: calc(1.5vmin + 0.8vh - 0.4vw);
 }
 
 body.dm label {
