@@ -184,7 +184,7 @@ body.dm .switch-label {
 }
 
 .side-panel {
-    width: 250px;
+    width: 200px;
     flex-shrink: 0;
 }
 
