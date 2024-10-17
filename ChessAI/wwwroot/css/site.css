@@ -492,7 +492,7 @@ body.dm .ai-selection-container {
     margin-bottom: 10px;
 }
 
-    #aiSelect:hover {#c54c4c
+    #aiSelect:hover {
         border-color: #c54c4c;
         box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
     }
