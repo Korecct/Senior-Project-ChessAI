@@ -278,14 +278,16 @@ namespace ChessAI.Controllers
             if (game == null)
             {
                 _logger.LogWarning("Game not found in session.");
-                return BadRequest("Game not found.");
+                // Return an empty list instead of BadRequest
+                return Json(new List<PositionModel>());
             }
 
             var piece = game.Board.Squares[position.Row][position.Col];
             if (piece == null || piece.IsWhite != game.IsWhiteTurn)
             {
                 _logger.LogWarning("Invalid piece selected or not player's turn.");
-                return BadRequest("Invalid piece selected.");
+                // Return an empty list instead of BadRequest
+                return Json(new List<PositionModel>());
             }
 
             var validMoves = piece.GetValidMoves(game.Board);

@@ -214,7 +214,7 @@ body.dm .switch-label {
     border: 2px solid #000;
     position: relative;
     transition: border-color 0.2s;
-    touch-action: none;
+    touch-action: manipulation;
 }
 
 body.dm .chess-board {
@@ -250,6 +250,7 @@ body.dm .white {
 
 /* Chess Piece Styles */
 .chess-piece {
+    will-change: transform;
     font-size: calc((var(--board-size) / 8) * 0.7);
     font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
     user-select: none;
