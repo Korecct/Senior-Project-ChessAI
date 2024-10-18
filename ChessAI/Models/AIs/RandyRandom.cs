@@ -34,7 +34,7 @@ namespace ChessAI.Models.AIs
                                       .ToList();
 
                 // If any valid moves are found, randomly select one and return it
-                if (validMoves.Any())
+                if (validMoves.Count != 0)
                 {
                     var move = validMoves[_random.Next(validMoves.Count)]; // Randomly pick a valid move
                     return (

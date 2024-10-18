@@ -214,6 +214,7 @@ body.dm .switch-label {
     border: 2px solid #000;
     position: relative;
     transition: border-color 0.2s;
+    touch-action: none;
 }
 
 body.dm .chess-board {

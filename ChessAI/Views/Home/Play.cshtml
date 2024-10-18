@@ -45,7 +45,7 @@
                                      data-piece="@pieceSymbol" data-row="@row" data-col="@col"
                                      data-piece-type="@piece.GetType().Name"
                                      data-piece-color="@(piece.IsWhite ? "white" : "black")"
-                                     onmousedown="pieceMouseDown(event)">
+                                     onpointerdown="piecePointerDown(event)">
                                     @pieceSymbol
                                 </div>
                             }
@@ -125,7 +125,7 @@
         let originalSquare = null;
         let isGameBusy = false;
 
-        function pieceMouseDown(event) {
+        function piecePointerDown(event) {
             if (@Model.Game.IsGameOver.ToString().ToLower() || isGameBusy) {
                 // Prevent moving pieces if the game is over or if AI is busy
                 return;
@@ -141,15 +141,15 @@
             selectedPiece = event.target;
             originalSquare = selectedPiece.parentElement;
 
-            // Get the mouse position relative to the piece
+            // Get the touch/mouse position relative to the piece
             const rect = selectedPiece.getBoundingClientRect();
             offsetX = event.clientX - rect.left;
             offsetY = event.clientY - rect.top;
 
             selectedPiece.style.zIndex = 1000;
 
-            document.addEventListener('mousemove', documentMouseMove);
-            document.addEventListener('mouseup', documentMouseUp);
+            document.addEventListener('pointermove', documentPointerMove);
+            document.addEventListener('pointerup', documentPointerUp);
 
             // Highlight possible moves
             const fromRow = parseInt(selectedPiece.getAttribute('data-row'));
@@ -160,9 +160,38 @@
             event.preventDefault();
         }
 
-        function documentMouseMove(event) {
+        function documentPointerMove(event) {
             if (selectedPiece) {
                 moveAt(event.clientX, event.clientY);
+                event.preventDefault();
+            }
+        }
+
+        function documentPointerUp(event) {
+            if (selectedPiece) {
+                // Get the square under the cursor
+                const elements = document.elementsFromPoint(event.clientX, event.clientY);
+                const square = elements.find(el => el.classList.contains('chess-square'));
+
+                if (square && square.classList.contains('highlight')) {
+                    const fromRow = parseInt(selectedPiece.getAttribute('data-row'));
+                    const fromCol = parseInt(selectedPiece.getAttribute('data-col'));
+                    const toRow = parseInt(square.getAttribute('data-row'));
+                    const toCol = parseInt(square.getAttribute('data-col'));
+
+                    postMove(fromRow, fromCol, toRow, toCol);
+                } else {
+                    // Move back to original position
+                    resetPiecePosition(selectedPiece);
+                }
+
+                clearHighlights();
+                document.removeEventListener('pointermove', documentPointerMove);
+                document.removeEventListener('pointerup', documentPointerUp);
+                selectedPiece = null;
+                originalSquare = null;
+
+                event.preventDefault();
             }
         }
 
@@ -172,8 +201,7 @@
             const x = clientX - parentRect.left - offsetX;
             const y = clientY - parentRect.top - offsetY;
 
-            selectedPiece.style.left = x + 'px';
-            selectedPiece.style.top = y + 'px';
+            selectedPiece.style.transform = `translate(${x}px, ${y}px)`;
         }
 
         function documentMouseUp(event) {
@@ -203,8 +231,7 @@
         }
 
         function resetPiecePosition(piece) {
-            piece.style.left = '';
-            piece.style.top = '';
+            piece.style.transform = '';
             piece.style.zIndex = '';
         }
 
