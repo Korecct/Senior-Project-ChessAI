@@ -6,6 +6,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="~/css/site.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
     <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
@@ -37,15 +39,13 @@
                             pieceSymbol = GetPieceSymbol(piece);
                         }
                         <div class="chess-square @className"
-                             data-row="@row" data-col="@col"
-                             >
+                             data-row="@row" data-col="@col">
                             @if (!string.IsNullOrEmpty(pieceSymbol))
                             {
                                 <div class="chess-piece @(piece.IsWhite ? "white-piece" : "black-piece")"
                                      data-piece="@pieceSymbol" data-row="@row" data-col="@col"
                                      data-piece-type="@piece.GetType().Name"
-                                     data-piece-color="@(piece.IsWhite ? "white" : "black")"
-                                    >
+                                     data-piece-color="@(piece.IsWhite ? "white" : "black")">
                                     @pieceSymbol
                                 </div>
                             }
@@ -118,7 +118,6 @@
             </div>
         </div>
     </div>
-
     <script>
         (function () {
             let selectedPiece = null;
@@ -134,80 +133,54 @@
             let isWhiteTurn = @Html.Raw(Json.Serialize(Model.Game.IsWhiteTurn));
 
             const sounds = {
-                Move: new Audio(),
-                Capture: new Audio(),
-                Castle: new Audio(),
-                Promotion: new Audio(),
-                Check: new Audio(),
-                Checkmate: new Audio(),
-                Stalemate: new Audio(),
-                Victory: new Audio(),
-                Defeat: new Audio()
+                Move: new Audio('/sounds/move.mp3'),
+                Capture: new Audio('/sounds/capture.mp3'),
+                Castle: new Audio('/sounds/castle.mp3'),
+                Promotion: new Audio('/sounds/promotion.mp3'),
+                Check: new Audio('/sounds/check.mp3'),
+                Checkmate: new Audio('/sounds/checkmate.mp3'),
+                Stalemate: new Audio('/sounds/stalemate.mp3'),
+                Victory: new Audio('/sounds/victory.mp3'),
+                Defeat: new Audio('/sounds/defeat.mp3'),
+                AIThinking: new Audio('/sounds/ai-thinking.mp3')
             };
 
-            function loadSounds() {
-                Object.keys(sounds).forEach(sound => {
-                    const audioElement = sounds[sound];
-                    audioElement.preload = 'auto';
-                    const mp3Source = document.createElement('source');
-                    mp3Source.src = `/sounds/${sound.toLowerCase()}.mp3`;
-                    mp3Source.type = 'audio/mpeg';
-
-                    const oggSource = document.createElement('source');
-                    oggSource.src = `/sounds/${sound.toLowerCase()}.ogg`;
-                    oggSource.type = 'audio/ogg';
-
-                    audioElement.appendChild(mp3Source);
-                    audioElement.appendChild(oggSource);
-                });
+            // Preload sounds
+            for (const sound in sounds) {
+                sounds[sound].preload = 'auto';
             }
-
-            loadSounds();
 
             function playSound(event) {
                 const sound = sounds[event];
                 if (sound) {
-                    //console.log(`Playing sound: ${event}`);
                     sound.currentTime = 0;
-                    const playPromise = sound.play();
-                    if (playPromise !== undefined) {
-                        playPromise.then(() => {
-                            
-                        }).catch(error => {
-                            console.error(`Failed to play sound: ${event}`, error);
-                        });
-                    }
+                    sound.play().catch(error => {
+                        console.error(`Failed to play sound: ${event}`, error);
+                    });
                 } else {
                     console.warn(`Sound not found: ${event}`);
                 }
             }
 
-            // To close the modal
+            // Close the modal
             function closeGameResultModal() {
-                console.log('Closing game result modal.');
                 gameResultModal.style.display = 'none';
             }
 
             window.closeGameResultModal = closeGameResultModal;
 
-            const closeModalButton = document.getElementById('closeGameResultModal');
-            if (closeModalButton) {
-                closeModalButton.addEventListener('click', closeGameResultModal);
-                //console.log('Close button event listener added.');
-            } else {
-                console.warn('Close button not found.');
-            }
-
-            // Also allow closing the modal by clicking outside
+            // Allow closing the modal by clicking outside
             gameResultModal.addEventListener('click', function (event) {
                 if (event.target === gameResultModal) {
                     closeGameResultModal();
                 }
             });
 
-            document.addEventListener('pointerdown', piecePointerDown);
+            // Event Delegation for pointer events
+            const chessBoard = document.getElementById('chessBoard');
+            chessBoard.addEventListener('pointerdown', handlePointerDown);
 
-            function piecePointerDown(event) {
+            function handlePointerDown(event) {
                 if (!event.target.classList.contains('chess-piece')) return;
 
                 if (isGameOver || isGameBusy) {
@@ -238,21 +211,21 @@
                 const fromCol = parseInt(selectedPiece.dataset.col, 10);
                 getValidMoves(fromRow, fromCol);
 
-                // Add event listeners
-                document.addEventListener('pointermove', documentPointerMove);
-                document.addEventListener('pointerup', documentPointerUp);
+                // Add event listeners with throttling
+                document.addEventListener('pointermove', throttledPointerMove);
+                document.addEventListener('pointerup', handlePointerUp);
 
                 event.preventDefault();
             }
 
-            function documentPointerMove(event) {
+            const throttledPointerMove = throttle((event) => {
                 if (selectedPiece) {
                     moveAt(event.clientX, event.clientY);
                     event.preventDefault();
                 }
-            }
+            }, 16); // ~60fps
 
-            function documentPointerUp(event) {
+            function handlePointerUp(event) {
                 if (selectedPiece) {
                     const square = getSquareUnderPointer(event.clientX, event.clientY);
 
@@ -267,8 +240,8 @@
                     }
 
                     clearHighlights();
-                    document.removeEventListener('pointermove', documentPointerMove);
-                    document.removeEventListener('pointerup', documentPointerUp);
+                    document.removeEventListener('pointermove', throttledPointerMove);
+                    document.removeEventListener('pointerup', handlePointerUp);
                     selectedPiece = null;
                     originalSquare = null;
 
@@ -280,7 +253,7 @@
                 const parentRect = originalSquare.getBoundingClientRect();
                 const x = clientX - parentRect.left - offsetX;
                 const y = clientY - parentRect.top - offsetY;
-                selectedPiece.style.transform = `translate(${x}px, ${y}px)`;
+                selectedPiece.style.transform = `translate3d(${x}px, ${y}px, 0)`;
             }
 
             function getSquareUnderPointer(x, y) {
@@ -337,8 +310,7 @@
                 moves.forEach(move => {
                     const row = move.Row ?? move.row;
                     const col = move.Col ?? move.col;
-                    const selector = `.chess-square[data-row='${row}'][data-col='${col}']`;
-                    const square = document.querySelector(selector);
+                    const square = document.querySelector(`.chess-square[data-row='${row}'][data-col='${col}']`);
                     if (square) {
                         square.classList.add('highlight');
                     }
@@ -346,7 +318,8 @@
             }
 
             function clearHighlights() {
-                document.querySelectorAll('.chess-square.highlight').forEach(square => {
+                const highlightedSquares = document.querySelectorAll('.chess-square.highlight');
+                highlightedSquares.forEach(square => {
                     square.classList.remove('highlight');
                 });
             }
@@ -402,9 +375,11 @@
 
                         if (data.aiMove) {
                             updateTurnIndicator(null, null, null, false, "AI is thinking...");
+                            playSound('AIThinking');
                             setTimeout(() => {
                                 makeAIMove(data.aiMove.from, data.aiMove.to, data);
                                 updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
+                                isWhiteTurn = data.isWhiteTurn; // Update the turn
                                 isGameBusy = false;
                             }, 1000); // Delay before AI moves
                         } else {
@@ -484,6 +459,7 @@
                     rookToSquare.appendChild(rookPiece);
                     rookPiece.dataset.row = rookRow;
                     rookPiece.dataset.col = rookToCol;
+                    resetPiecePosition(rookPiece);
                     playSound('Castle');
                 }
             }
@@ -575,11 +551,6 @@
                 gameResultModal.style.display = 'flex';
             }
 
-            function closeGameResultModal() {
-                console.log('Closing game result modal.');
-                gameResultModal.style.display = 'none';
-            }
-
             function restartGame() {
                 const restartButton = document.querySelector('.restart-button');
                 if (restartButton) {
@@ -660,6 +631,27 @@
                         console.error('Error:', error);
                         alert('An error occurred while setting the game mode.');
                     });
+            }
+
+            // Debounce function to limit the rate at which a function can fire.
+            function throttle(fn, limit) {
+                let lastFunc;
+                let lastRan;
+                return function (...args) {
+                    const context = this;
+                    if (!lastRan) {
+                        fn.apply(context, args);
+                        lastRan = Date.now();
+                    } else {
+                        clearTimeout(lastFunc);
+                        lastFunc = setTimeout(function () {
+                            if ((Date.now() - lastRan) >= limit) {
+                                fn.apply(context, args);
+                                lastRan = Date.now();
+                            }
+                        }, limit - (Date.now() - lastRan));
+                    }
+                }
             }
 
             // Expose functions to global scope
