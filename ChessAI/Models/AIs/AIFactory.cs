@@ -4,7 +4,7 @@ namespace ChessAI.Models.AIs
 {
     public static class AIFactory
     {
-        private static readonly List<IAIPlayer> _aiPlayers = new List<IAIPlayer>();
+        private static readonly List<IAIPlayer> _aiPlayers = [];
 
         static AIFactory()
         {

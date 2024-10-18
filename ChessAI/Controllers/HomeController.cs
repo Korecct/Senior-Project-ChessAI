@@ -6,14 +6,9 @@ using System.Diagnostics;
 
 namespace ChessAI.Controllers
 {
-    public class HomeController : Controller
+    public class HomeController(ILogger<HomeController> logger) : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-
-        public HomeController(ILogger<HomeController> logger)
-        {
-            _logger = logger;
-        }
+        private readonly ILogger<HomeController> _logger = logger;
 
         public override void OnActionExecuting(ActionExecutingContext context)
         {
@@ -127,7 +122,7 @@ namespace ChessAI.Controllers
             var piece = game.Board.Squares[move.FromRow][move.FromCol];
 
             // Detect En Passant capture
-            if (piece is Pawn pawn)
+            if (piece is Pawn)
             {
                 if (move.ToCol != move.FromCol && game.Board.Squares[move.ToRow][move.ToCol] == null)
                 {
@@ -136,7 +131,7 @@ namespace ChessAI.Controllers
             }
 
             // Detect Castling
-            if (piece is King king && Math.Abs(move.ToCol - move.FromCol) == 2)
+            if (piece is King && Math.Abs(move.ToCol - move.FromCol) == 2)
             {
                 isCastle = true;
             }
@@ -191,42 +186,42 @@ namespace ChessAI.Controllers
                     var aiPlayer = AIFactory.GetAIByName(aiName);
                     if (aiPlayer != null)
                     {
-                        var aiMove = aiPlayer.GetNextMove(game);
+                        var (From, To) = aiPlayer.GetNextMove(game);
 
-                        var aiPiece = game.Board.Squares[aiMove.From.Row][aiMove.From.Col];
+                        var aiPiece = game.Board.Squares[From.Row][From.Col];
 
                         // Detect AI En Passant and Castling
                         bool aiIsEnPassantCapture = false;
                         bool aiIsCastle = false;
 
                         // Detect En Passant capture
-                        if (aiPiece is Pawn aiPawn)
+                        if (aiPiece is Pawn)
                         {
-                            if (aiMove.To.Col != aiMove.From.Col && game.Board.Squares[aiMove.To.Row][aiMove.To.Col] == null)
+                            if (To.Col != From.Col && game.Board.Squares[To.Row][To.Col] == null)
                             {
                                 aiIsEnPassantCapture = true;
                             }
                         }
 
                         // Detect Castling
-                        if (aiPiece is King aiKing && Math.Abs(aiMove.To.Col - aiMove.From.Col) == 2)
+                        if (aiPiece is King && Math.Abs(To.Col - From.Col) == 2)
                         {
                             aiIsCastle = true;
                         }
 
                         // Check if AI move is a capture before making the move
-                        bool aiIsCapture = game.Board.Squares[aiMove.To.Row][aiMove.To.Col] != null;
+                        bool aiIsCapture = game.Board.Squares[To.Row][To.Col] != null;
 
                         // Detect Promotion
                         bool aiIsPromotion = false;
-                        if (aiPiece is Pawn && ((aiPiece.IsWhite && aiMove.To.Row == 0) || (!aiPiece.IsWhite && aiMove.To.Row == 7)))
+                        if (aiPiece is Pawn && ((aiPiece.IsWhite && To.Row == 0) || (!aiPiece.IsWhite && To.Row == 7)))
                         {
                             aiIsPromotion = true;
                         }
 
                         var aiSuccess = game.MakeMove(
-                            (aiMove.From.Row, aiMove.From.Col),
-                            (aiMove.To.Row, aiMove.To.Col),
+                            (From.Row, From.Col),
+                            (To.Row, To.Col),
                             _logger
                         );
 
@@ -246,8 +241,8 @@ namespace ChessAI.Controllers
 
                         response.AIMove = new AIMoveResponse
                         {
-                            From = new PositionModel { Row = aiMove.From.Row, Col = aiMove.From.Col },
-                            To = new PositionModel { Row = aiMove.To.Row, Col = aiMove.To.Col }
+                            From = new PositionModel { Row = From.Row, Col = From.Col },
+                            To = new PositionModel { Row = To.Row, Col = To.Col }
                         };
                         response.AIIsCheckmate = aiIsCheckmate;
                         response.AIIsCheck = aiOpponentIsInCheck;
@@ -295,27 +290,27 @@ namespace ChessAI.Controllers
             // Filter out moves that would put own king in check
             var safeMoves = new List<PositionModel>();
 
-            foreach (var move in validMoves)
+            foreach (var (Row, Col) in validMoves)
             {
                 // Simulate the move
                 var originalPosition = piece.Position;
-                var capturedPiece = game.Board.Squares[move.Row][move.Col];
+                var capturedPiece = game.Board.Squares[Row][Col];
 
                 game.Board.Squares[originalPosition.Row][originalPosition.Col] = null;
-                game.Board.Squares[move.Row][move.Col] = piece;
-                piece.Position = (move.Row, move.Col);
+                game.Board.Squares[Row][Col] = piece;
+                piece.Position = (Row, Col);
 
                 // Check if own king is in check
                 bool isInCheck = game.Board.IsKingInCheck(piece.IsWhite);
 
                 // Undo the move
                 game.Board.Squares[originalPosition.Row][originalPosition.Col] = piece;
-                game.Board.Squares[move.Row][move.Col] = capturedPiece;
+                game.Board.Squares[Row][Col] = capturedPiece;
                 piece.Position = originalPosition;
 
                 if (!isInCheck)
                 {
-                    safeMoves.Add(new PositionModel { Row = move.Row, Col = move.Col });
+                    safeMoves.Add(new PositionModel { Row = Row, Col = Col });
                 }
             }
 

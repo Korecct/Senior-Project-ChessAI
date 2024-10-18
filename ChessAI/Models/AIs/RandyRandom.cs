@@ -8,7 +8,7 @@ namespace ChessAI.Models.AIs
 
     public class RandyRandom : IAIPlayer
     {
-        private static readonly Random _random = new Random();
+        private static readonly Random _random = new();
 
         public string Name => "Randy Random";
 
@@ -36,10 +36,10 @@ namespace ChessAI.Models.AIs
                 // If any valid moves are found, randomly select one and return it
                 if (validMoves.Count != 0)
                 {
-                    var move = validMoves[_random.Next(validMoves.Count)]; // Randomly pick a valid move
+                    var (Row, Col) = validMoves[_random.Next(validMoves.Count)]; // Randomly pick a valid move
                     return (
                         new PositionModel { Row = piece.Position.Row, Col = piece.Position.Col }, // From position
-                        new PositionModel { Row = move.Row, Col = move.Col }  // To position
+                        new PositionModel { Row = Row, Col = Col }  // To position
                     );
                 }
             }
@@ -49,7 +49,7 @@ namespace ChessAI.Models.AIs
         }
 
         // Check if a move is safe
-        private bool IsMoveSafe(Board board, Piece piece, (int Row, int Col) move)
+        private static bool IsMoveSafe(Board board, Piece piece, (int Row, int Col) move)
         {
             // Store original position of the piece
             var originalPosition = piece.Position;
