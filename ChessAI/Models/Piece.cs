@@ -44,7 +44,7 @@ namespace ChessAI.Models
             }
 
             // Captures
-            int[] captureCols = { Position.Col - 1, Position.Col + 1 };
+            int[] captureCols = [Position.Col - 1, Position.Col + 1];
             foreach (int col in captureCols)
             {
                 if (board.IsWithinBounds(forwardRow, col))
@@ -77,8 +77,8 @@ namespace ChessAI.Models
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int[] rowDirections = { -1, 1, 0, 0 };
-            int[] colDirections = { 0, 0, -1, 1 };
+            int[] rowDirections = [-1, 1, 0, 0];
+            int[] colDirections = [0, 0, -1, 1];
 
             for (int dir = 0; dir < 4; dir++)
             {
@@ -122,8 +122,8 @@ namespace ChessAI.Models
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int[] rowOffsets = { -2, -1, 1, 2 };
-            int[] colOffsets = { -2, -1, 1, 2 };
+            int[] rowOffsets = [-2, -1, 1, 2];
+            int[] colOffsets = [-2, -1, 1, 2];
 
             foreach (int rowOffset in rowOffsets)
             {
@@ -154,8 +154,8 @@ namespace ChessAI.Models
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int[] rowDirections = { -1, -1, 1, 1 };
-            int[] colDirections = { -1, 1, -1, 1 };
+            int[] rowDirections = [-1, -1, 1, 1];
+            int[] colDirections = [-1, 1, -1, 1];
 
             for (int dir = 0; dir < 4; dir++)
             {
@@ -219,7 +219,7 @@ namespace ChessAI.Models
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int[] offsets = { -1, 0, 1 };
+            int[] offsets = [-1, 0, 1];
 
             foreach (int rowOffset in offsets)
             {
@@ -298,7 +298,7 @@ namespace ChessAI.Models
         {
             // Exclude castling to avoid infinite recursion
             var moves = new List<(int Row, int Col)>();
-            int[] offsets = { -1, 0, 1 };
+            int[] offsets = [-1, 0, 1];
 
             foreach (int rowOffset in offsets)
             {

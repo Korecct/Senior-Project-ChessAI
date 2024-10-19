@@ -70,7 +70,7 @@ namespace ChessAI.Models
             if (validMoves.Any(m => m.Row == to.Row && m.Col == to.Col))
             {
                 var capturedPiece = Board.Squares[to.Row][to.Col];
-                var originalPosition = piece.Position;
+                var (Row, Col) = piece.Position;
 
                 // Castling
                 if (piece is King king && Math.Abs(to.Col - from.Col) == 2)

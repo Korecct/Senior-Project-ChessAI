@@ -74,8 +74,8 @@ namespace ChessAI.Models
 
         public bool IsKingInCheck(bool isWhite)
         {
-            (int Row, int Col) kingPosition = FindKingPosition(isWhite);
-            return IsSquareUnderAttack(kingPosition.Row, kingPosition.Col, !isWhite);
+            (int Row, int Col) = FindKingPosition(isWhite);
+            return IsSquareUnderAttack(Row, Col, !isWhite);
         }
 
         public bool IsSquareUnderAttack(int row, int col, bool byWhite)
@@ -150,8 +150,8 @@ namespace ChessAI.Models
 
         public bool IsInsufficientMaterial()
         {
-            List<Piece> whitePieces = new List<Piece>();
-            List<Piece> blackPieces = new List<Piece>();
+            List<Piece> whitePieces = [];
+            List<Piece> blackPieces = [];
 
             foreach (var row in Squares)
             {
@@ -190,10 +190,10 @@ namespace ChessAI.Models
 
             // King and Bishop vs. King and Bishop with bishops on the same color
             if (whitePieces.Count == 1 && blackPieces.Count == 1 &&
-                whitePieces[0] is Bishop && blackPieces[0] is Bishop)
+                whitePieces[0] is Bishop bishop && blackPieces[0] is Bishop bishopBlack)
             {
-                var whiteBishop = (Bishop)whitePieces[0];
-                var blackBishop = (Bishop)blackPieces[0];
+                var whiteBishop = bishop;
+                var blackBishop = bishopBlack;
 
                 bool whiteBishopOnLightSquare = (whiteBishop.Position.Row + whiteBishop.Position.Col) % 2 == 0;
                 bool blackBishopOnLightSquare = (blackBishop.Position.Row + blackBishop.Position.Col) % 2 == 0;

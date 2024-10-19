@@ -6,6 +6,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <link rel="stylesheet" href="~/css/site.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
     <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
@@ -37,15 +39,13 @@
                             pieceSymbol = GetPieceSymbol(piece);
                         }
                         <div class="chess-square @className"
-                             data-row="@row" data-col="@col"
-                             onclick="squareClick(event)">
+                             data-row="@row" data-col="@col">
                             @if (!string.IsNullOrEmpty(pieceSymbol))
                             {
                                 <div class="chess-piece @(piece.IsWhite ? "white-piece" : "black-piece")"
                                      data-piece="@pieceSymbol" data-row="@row" data-col="@col"
                                      data-piece-type="@piece.GetType().Name"
-                                     data-piece-color="@(piece.IsWhite ? "white" : "black")"
-                                     onmousedown="pieceMouseDown(event)">
+                                     data-piece-color="@(piece.IsWhite ? "white" : "black")">
                                     @pieceSymbol
                                 </div>
                             }
@@ -74,14 +74,14 @@
                 }
                 else
                 {
-                    <span>It's <strong>@(Model.IsWhiteTurn ? "White's" : "Black's")</strong> turn.</span>
+                    <span><strong>@(Model.IsWhiteTurn ? "White's" : "Black's")</strong> turn.</span>
                     @if (Model.IsWhiteKingInCheck)
                     {
-                        <div class="check-indicator">White king is in check!</div>
+                        <div class="check-indicator">White check!</div>
                     }
                     @if (Model.IsBlackKingInCheck)
                     {
-                        <div class="check-indicator">Black king is in check!</div>
+                        <div class="check-indicator">Black check!</div>
                     }
                 }
             </div>
@@ -118,534 +118,545 @@
             </div>
         </div>
     </div>
-
     <script>
-        let selectedPiece = null;
-        let offsetX, offsetY;
-        let originalSquare = null;
-        let isGameBusy = false;
+        (function () {
+            let selectedPiece = null;
+            let offsetX = 0, offsetY = 0;
+            let originalSquare = null;
+            let isGameBusy = false;
+            const requestVerificationToken = document.getElementById('RequestVerificationToken').value;
+            const turnIndicator = document.getElementById('turnIndicator');
+            const gameResultModal = document.getElementById('gameResultModal');
+            const gameResultMessage = document.getElementById('gameResultMessage');
 
-        function pieceMouseDown(event) {
-            if (@Model.Game.IsGameOver.ToString().ToLower() || isGameBusy) {
-                // Prevent moving pieces if the game is over or if AI is busy
-                return;
+            const isGameOver = @Html.Raw(Json.Serialize(Model.Game.IsGameOver));
+            let isWhiteTurn = @Html.Raw(Json.Serialize(Model.Game.IsWhiteTurn));
+
+            const sounds = {
+                Move: new Audio('/sounds/move.mp3'),
+                Capture: new Audio('/sounds/capture.mp3'),
+                Castle: new Audio('/sounds/castle.mp3'),
+                Promotion: new Audio('/sounds/promotion.mp3'),
+                Check: new Audio('/sounds/check.mp3'),
+                Checkmate: new Audio('/sounds/checkmate.mp3'),
+                Stalemate: new Audio('/sounds/stalemate.mp3'),
+                Victory: new Audio('/sounds/victory.mp3'),
+                Defeat: new Audio('/sounds/defeat.mp3'),
+            };
+
+            // Preload sounds
+            for (const sound in sounds) {
+                sounds[sound].preload = 'auto';
             }
-            let isWhiteTurn = @Model.Game.IsWhiteTurn.ToString().ToLower();
-            const pieceColor = event.target.getAttribute('data-piece-color');
 
-            if ((isWhiteTurn === 'true' && pieceColor !== 'white') || (isWhiteTurn === 'false' && pieceColor !== 'black')) {
-                // Not this player's turn
-                return;
-            }
-
-            selectedPiece = event.target;
-            originalSquare = selectedPiece.parentElement;
-
-            // Get the mouse position relative to the piece
-            const rect = selectedPiece.getBoundingClientRect();
-            offsetX = event.clientX - rect.left;
-            offsetY = event.clientY - rect.top;
-
-            selectedPiece.style.zIndex = 1000;
-
-            document.addEventListener('mousemove', documentMouseMove);
-            document.addEventListener('mouseup', documentMouseUp);
-
-            // Highlight possible moves
-            const fromRow = parseInt(selectedPiece.getAttribute('data-row'));
-            const fromCol = parseInt(selectedPiece.getAttribute('data-col'));
-
-            getValidMoves(fromRow, fromCol);
-
-            event.preventDefault();
-        }
-
-        function documentMouseMove(event) {
-            if (selectedPiece) {
-                moveAt(event.clientX, event.clientY);
-            }
-        }
-
-        function moveAt(clientX, clientY) {
-            const parentRect = originalSquare.getBoundingClientRect();
-
-            const x = clientX - parentRect.left - offsetX;
-            const y = clientY - parentRect.top - offsetY;
-
-            selectedPiece.style.left = x + 'px';
-            selectedPiece.style.top = y + 'px';
-        }
-
-        function documentMouseUp(event) {
-            if (selectedPiece) {
-                // Get the square under the cursor
-                const elements = document.elementsFromPoint(event.clientX, event.clientY);
-                const square = elements.find(el => el.classList.contains('chess-square'));
-
-                if (square && square.classList.contains('highlight')) {
-                    const fromRow = parseInt(selectedPiece.getAttribute('data-row'));
-                    const fromCol = parseInt(selectedPiece.getAttribute('data-col'));
-                    const toRow = parseInt(square.getAttribute('data-row'));
-                    const toCol = parseInt(square.getAttribute('data-col'));
-
-                    postMove(fromRow, fromCol, toRow, toCol);
+            function playSound(event) {
+                const sound = sounds[event];
+                if (sound) {
+                    sound.currentTime = 0;
+                    sound.play().catch(error => {
+                        console.error(`Failed to play sound: ${event}`, error);
+                    });
                 } else {
-                    // Move back to original position
-                    resetPiecePosition(selectedPiece);
+                    console.warn(`Sound not found: ${event}`);
+                }
+            }
+
+            // Close the modal
+            function closeGameResultModal() {
+                gameResultModal.style.display = 'none';
+            }
+
+            window.closeGameResultModal = closeGameResultModal;
+
+            // Allow closing the modal by clicking outside
+            gameResultModal.addEventListener('click', function (event) {
+                if (event.target === gameResultModal) {
+                    closeGameResultModal();
+                }
+            });
+
+            // Event Delegation for pointer events
+            const chessBoard = document.getElementById('chessBoard');
+            chessBoard.addEventListener('pointerdown', handlePointerDown);
+
+            function handlePointerDown(event) {
+                if (!event.target.classList.contains('chess-piece')) return;
+
+                if (isGameOver || isGameBusy) {
+                    // Prevent moving pieces if the game is over or if AI is busy
+                    return;
                 }
 
+                const pieceColor = event.target.dataset.pieceColor;
+
+                if ((isWhiteTurn && pieceColor !== 'white') || (!isWhiteTurn && pieceColor !== 'black')) {
+                    // Not this player's turn
+                    return;
+                }
+
+                selectedPiece = event.target;
+                originalSquare = selectedPiece.parentElement;
+
+                // Get the touch/mouse position relative to the piece
+                const rect = selectedPiece.getBoundingClientRect();
+                offsetX = event.clientX - rect.left;
+                offsetY = event.clientY - rect.top;
+
+                selectedPiece.style.zIndex = 1000;
+                selectedPiece.setPointerCapture(event.pointerId);
+
+                // Highlight possible moves
+                const fromRow = parseInt(selectedPiece.dataset.row, 10);
+                const fromCol = parseInt(selectedPiece.dataset.col, 10);
+                getValidMoves(fromRow, fromCol);
+
+                // Add event listeners with throttling
+                document.addEventListener('pointermove', throttledPointerMove);
+                document.addEventListener('pointerup', handlePointerUp);
+
+                event.preventDefault();
+            }
+
+            const throttledPointerMove = throttle((event) => {
+                if (selectedPiece) {
+                    moveAt(event.clientX, event.clientY);
+                    event.preventDefault();
+                }
+            }, 16); // ~60fps
+
+            function handlePointerUp(event) {
+                if (selectedPiece) {
+                    const square = getSquareUnderPointer(event.clientX, event.clientY);
+
+                    if (square && square.classList.contains('highlight')) {
+                        const fromRow = parseInt(selectedPiece.dataset.row, 10);
+                        const fromCol = parseInt(selectedPiece.dataset.col, 10);
+                        const toRow = parseInt(square.dataset.row, 10);
+                        const toCol = parseInt(square.dataset.col, 10);
+                        postMove(fromRow, fromCol, toRow, toCol);
+                    } else {
+                        resetPiecePosition(selectedPiece);
+                    }
+
+                    clearHighlights();
+                    document.removeEventListener('pointermove', throttledPointerMove);
+                    document.removeEventListener('pointerup', handlePointerUp);
+                    selectedPiece = null;
+                    originalSquare = null;
+
+                    event.preventDefault();
+                }
+            }
+
+            function moveAt(clientX, clientY) {
+                const parentRect = originalSquare.getBoundingClientRect();
+                const x = clientX - parentRect.left - offsetX;
+                const y = clientY - parentRect.top - offsetY;
+                selectedPiece.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+            }
+
+            function getSquareUnderPointer(x, y) {
+                const elements = document.elementsFromPoint(x, y);
+                return elements.find(el => el.classList.contains('chess-square'));
+            }
+
+            function resetPiecePosition(piece) {
+                piece.style.transform = '';
+                piece.style.zIndex = '';
+            }
+
+            document.addEventListener('click', function (event) {
+                if (event.target.classList.contains('chess-square')) {
+                    squareClick(event);
+                }
+            });
+
+            function squareClick(event) {
+                if (!selectedPiece) return;
+
+                const targetSquare = event.target;
+                if (!targetSquare.classList.contains('highlight')) return;
+
+                const fromRow = parseInt(selectedPiece.dataset.row, 10);
+                const fromCol = parseInt(selectedPiece.dataset.col, 10);
+                const toRow = parseInt(targetSquare.dataset.row, 10);
+                const toCol = parseInt(targetSquare.dataset.col, 10);
+
+                postMove(fromRow, fromCol, toRow, toCol);
                 clearHighlights();
-                document.removeEventListener('mousemove', documentMouseMove);
-                document.removeEventListener('mouseup', documentMouseUp);
                 selectedPiece = null;
                 originalSquare = null;
             }
-        }
 
-        function resetPiecePosition(piece) {
-            piece.style.left = '';
-            piece.style.top = '';
-            piece.style.zIndex = '';
-        }
-
-        function squareClick(event) {
-            if (!selectedPiece) {
-                // No piece selected
-                return;
-            }
-
-            const fromRow = parseInt(selectedPiece.getAttribute('data-row'));
-            const fromCol = parseInt(selectedPiece.getAttribute('data-col'));
-            const toRow = parseInt(event.currentTarget.getAttribute('data-row'));
-            const toCol = parseInt(event.currentTarget.getAttribute('data-col'));
-
-            // Only allow moving to highlighted squares
-            if (!event.currentTarget.classList.contains('highlight')) {
-                return;
-            }
-
-            postMove(fromRow, fromCol, toRow, toCol);
-            clearHighlights();
-            selectedPiece = null;
-        }
-
-        function getValidMoves(row, col) {
-            fetch('/Home/GetValidMoves', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
-                },
-                body: JSON.stringify({ row: row, col: col })
-            }).then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    return Promise.reject('Failed to fetch valid moves.');
-                }
-            }).then(validMoves => {
-                highlightValidMoves(validMoves);
-            }).catch(error => {
-                console.error('Error:', error);
-            });
-        }
-
-        function highlightValidMoves(moves) {
-            moves.forEach(move => {
-                const row = move.Row !== undefined ? move.Row : move.row;
-                const col = move.Col !== undefined ? move.Col : move.col;
-                const selector = `.chess-square[data-row='${row}'][data-col='${col}']`;
-                const square = document.querySelector(selector);
-                if (square) {
-                    square.classList.add('highlight');
-                }
-            });
-        }
-
-        function clearHighlights() {
-            const highlightedSquares = document.querySelectorAll('.chess-square.highlight');
-            highlightedSquares.forEach(square => {
-                square.classList.remove('highlight');
-            });
-        }
-
-        function playSound(event) {
-            const soundElement = document.getElementById(`sound${event}`);
-            if (soundElement) {
-                // Reset for imediate replay
-                soundElement.currentTime = 0;
-                soundElement.play();
-            }
-        }
-
-        function updateTurnIndicator(isWhiteTurn, isWhiteKingInCheck, isBlackKingInCheck, isGameOver, message) {
-            const turnIndicator = document.getElementById('turnIndicator');
-            if (isGameOver) {
-                turnIndicator.innerHTML = '<span>Game Over</span>';
-            } else if (message) {
-                turnIndicator.innerHTML = `<span>${message}</span>`;
-            } else {
-                let html = `<span>It's <strong>${isWhiteTurn === true ? "White's" : "Black's"}</strong> turn.</span>`;
-                if (isWhiteKingInCheck) {
-                    html += '<div class="check-indicator">White king is in check!</div>';
-                }
-                if (isBlackKingInCheck) {
-                    html += '<div class="check-indicator">Black king is in check!</div>';
-                }
-                turnIndicator.innerHTML = html;
-            }
-        }
-
-        async function postMove(fromRow, fromCol, toRow, toCol) {
-            if (isGameBusy) {
-                return;
-            }
-            isGameBusy = true;
-
-            try {
-                const response = await fetch('/Home/MakeMove', {
+            function getValidMoves(row, col) {
+                fetch('/Home/GetValidMoves', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
+                        'RequestVerificationToken': requestVerificationToken
                     },
-                    body: JSON.stringify({ fromRow, fromCol, toRow, toCol })
-                });
+                    body: JSON.stringify({ row, col })
+                })
+                    .then(response => {
+                        if (response.ok) return response.json();
+                        throw new Error('Failed to fetch valid moves.');
+                    })
+                    .then(validMoves => highlightValidMoves(validMoves))
+                    .catch(error => console.error('Error:', error));
+            }
 
-                if (!response.ok) {
-                    throw new Error('Invalid move.');
+            function highlightValidMoves(moves) {
+                moves.forEach(move => {
+                    const row = move.Row ?? move.row;
+                    const col = move.Col ?? move.col;
+                    const square = document.querySelector(`.chess-square[data-row='${row}'][data-col='${col}']`);
+                    if (square) {
+                        square.classList.add('highlight');
+                    }
+                });
+            }
+
+            function clearHighlights() {
+                const highlightedSquares = document.querySelectorAll('.chess-square.highlight');
+                highlightedSquares.forEach(square => {
+                    square.classList.remove('highlight');
+                });
+            }
+
+            function updateTurnIndicator(isWhiteTurnParam, isWhiteKingInCheck, isBlackKingInCheck, isGameOverParam, message) {
+                if (isGameOverParam) {
+                    turnIndicator.innerHTML = '<span>Game Over</span>';
+                    return;
                 }
 
-                const data = await response.json();
+                if (message) {
+                    turnIndicator.innerHTML = `<span>${message}</span>`;
+                    return;
+                }
 
-                if (data.success) {
-                    // Move the players piece in the UI
-                    movePieceInUI(fromRow, fromCol, toRow, toCol, data);
+                let html = `<span><strong>${isWhiteTurnParam ? "White's" : "Black's"}</strong> turn.</span>`;
+                if (isWhiteKingInCheck) {
+                    html += '<div class="check-indicator">White check!</div>';
+                }
+                if (isBlackKingInCheck) {
+                    html += '<div class="check-indicator">Black check!</div>';
+                }
+                turnIndicator.innerHTML = html;
+            }
 
-                    // Play sound for player's move
-                    playPlayerMoveSound(data);
+            async function postMove(fromRow, fromCol, toRow, toCol) {
+                if (isGameBusy) return;
+                isGameBusy = true;
 
-                    // Check for game over after player's move
-                    if (data.isGameOver) {
-                        handleGameOver(data.gameResult);
-                        isGameBusy = false; // Game over
-                        return;
-                    }
+                try {
+                    const response = await fetch('/Home/MakeMove', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': requestVerificationToken
+                        },
+                        body: JSON.stringify({ fromRow, fromCol, toRow, toCol })
+                    });
 
-                    // handle AI movement if exists
-                    if (data.aiMove) {
-                        // Update the turn indicator to show that it's the AI's turn
-                        updateTurnIndicator(null, null, null, false, "AI is thinking...");
+                    if (!response.ok) throw new Error('Invalid move.');
 
-                        // Delay before AI moves
-                        setTimeout(() => {
-                            // Animate the AI's move
-                            makeAIMove(data.aiMove.from, data.aiMove.to, data);
+                    const data = await response.json();
 
-                            updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
+                    if (data.success) {
+                        movePieceInUI(fromRow, fromCol, toRow, toCol, data);
+                        playPlayerMoveSound(data);
 
-                            // After AI's move is done, allow player interaction
+                        if (data.isGameOver) {
+                            handleGameOver(data.gameResult);
                             isGameBusy = false;
+                            return;
+                        }
 
-                        }, 1000); // Delay 1 second before AI moves
+                        if (data.aiMove) {
+                            updateTurnIndicator(null, null, null, false, "AI is thinking...");
+                            setTimeout(() => {
+                                makeAIMove(data.aiMove.from, data.aiMove.to, data);
+                                updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
+                                isWhiteTurn = data.isWhiteTurn; // Update the turn
+                                isGameBusy = false;
+                            }, 1000); // Delay before AI moves
+                        } else {
+                            updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
+                            isWhiteTurn = data.isWhiteTurn; // Update the turn
+                            isGameBusy = false;
+                        }
                     } else {
-                        // No AI move, update the turn indicator
-                        updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
+                        alert('Invalid move.');
+                        resetPiecePosition(selectedPiece);
                         isGameBusy = false;
                     }
-
-                } else {
-                    alert('Invalid move.');
-                    resetPiecePosition(selectedPiece);
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while making the move.');
+                    if (selectedPiece) resetPiecePosition(selectedPiece);
                     isGameBusy = false;
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('An error occurred while making the move.');
-                resetPiecePosition(selectedPiece);
-                isGameBusy = false;
             }
-        }
 
-        function movePieceInUI(fromRow, fromCol, toRow, toCol, data) {
-            const fromSquare = document.querySelector(`.chess-square[data-row='${fromRow}'][data-col='${fromCol}']`);
-            const toSquare = document.querySelector(`.chess-square[data-row='${toRow}'][data-col='${toCol}']`);
+            function movePieceInUI(fromRow, fromCol, toRow, toCol, data) {
+                const fromSquare = document.querySelector(`.chess-square[data-row='${fromRow}'][data-col='${fromCol}']`);
+                const toSquare = document.querySelector(`.chess-square[data-row='${toRow}'][data-col='${toCol}']`);
 
-            if (fromSquare && toSquare) {
-                const piece = fromSquare.querySelector('.chess-piece');
-                if (piece) {
-                    // Remove any piece at the destination (for captures)
-                    const capturedPiece = toSquare.querySelector('.chess-piece');
-                    if (capturedPiece) {
-                        capturedPiece.remove();
-                    }
+                if (fromSquare && toSquare) {
+                    const piece = fromSquare.querySelector('.chess-piece');
+                    if (piece) {
+                        const capturedPiece = toSquare.querySelector('.chess-piece');
+                        if (capturedPiece) capturedPiece.remove();
 
-                    // Move the piece to the new square
-                    toSquare.appendChild(piece);
-                    // Update the piece's data attributes
-                    piece.setAttribute('data-row', toRow);
-                    piece.setAttribute('data-col', toCol);
-                    // Reset piece styles
-                    resetPiecePosition(piece);
+                        toSquare.appendChild(piece);
+                        piece.dataset.row = toRow;
+                        piece.dataset.col = toCol;
+                        resetPiecePosition(piece);
 
-                    // Pawn Promotion
-                    if (data.playerIsPromotion) {
-                        // Update piece symbol to Queen
-                        const isWhite = piece.getAttribute('data-piece-color') === 'white';
-                        const queenSymbol = isWhite ? '♕' : '♛';
-                        piece.textContent = queenSymbol;
-
-                        // Update data attributes
-                        piece.setAttribute('data-piece-type', 'Queen');
-                        piece.setAttribute('data-piece', queenSymbol);
-                    }
-
-                    // En Passant
-                    if (data.playerIsEnPassantCapture) {
-                        const capturedPawnRow = piece.getAttribute('data-piece-color') === 'white' ? toRow + 1 : toRow - 1;
-                        const capturedPawnSquare = document.querySelector(`.chess-square[data-row='${capturedPawnRow}'][data-col='${toCol}']`);
-                        const capturedPawn = capturedPawnSquare.querySelector('.chess-piece');
-                        if (capturedPawn) {
-                            capturedPawn.remove();
+                        // Handle special moves
+                        if (data.playerIsPromotion) {
+                            promotePawn(piece);
                         }
-                    }
-
-                    // Castling
-                    if (data.playerIsCastle) {
-                        const isKingsideCastle = toCol > fromCol;
-                        const rookFromCol = isKingsideCastle ? 7 : 0;
-                        const rookToCol = isKingsideCastle ? toCol - 1 : toCol + 1;
-                        const rookRow = fromRow;
-                        const rookFromSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookFromCol}']`);
-                        const rookToSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookToCol}']`);
-                        const rookPiece = rookFromSquare.querySelector('.chess-piece');
-                        if (rookPiece) {
-                            rookToSquare.appendChild(rookPiece);
-                            rookPiece.setAttribute('data-row', rookRow);
-                            rookPiece.setAttribute('data-col', rookToCol);
+                        if (data.playerIsEnPassantCapture) {
+                            captureEnPassant(piece, toRow, toCol);
+                        }
+                        if (data.playerIsCastle) {
+                            castleRook(piece, fromRow, fromCol, toCol);
                         }
                     }
                 }
             }
-        }
 
-
-        function playPlayerMoveSound(data) {
-            if (data.playerIsCheckmate) {
-                playSound('Checkmate');
-            } else if (data.playerIsCheck) {
-                playSound('Check');
-            } else if (data.playerIsCastle) {
-                playSound('Castle');
-            } else if (data.playerIsCapture || data.playerIsEnPassantCapture) {
-                playSound('Capture');
-            } else if (data.playerIsPromotion) {
+            function promotePawn(piece) {
+                const isWhite = piece.dataset.pieceColor === 'white';
+                const queenSymbol = isWhite ? '♕' : '♛';
+                piece.textContent = queenSymbol;
+                piece.dataset.pieceType = 'Queen';
+                piece.dataset.piece = queenSymbol;
                 playSound('Promotion');
-            } else {
-                playSound('Move');
             }
-        }
 
-        function playAIMoveSound(data) {
-            if (data.aiIsCheckmate) {
-                playSound('Checkmate');
-            } else if (data.aiIsCheck) {
-                playSound('Check');
-            } else if (data.aiIsCastle) {
-                playSound('Castle');
-            } else if (data.aiIsCapture || data.aiIsEnPassantCapture) {
+            function captureEnPassant(piece, toRow, toCol) {
+                const direction = piece.dataset.pieceColor === 'white' ? 1 : -1;
+                const capturedPawnRow = toRow + direction;
+                const capturedPawnSquare = document.querySelector(`.chess-square[data-row='${capturedPawnRow}'][data-col='${toCol}']`);
+                const capturedPawn = capturedPawnSquare.querySelector('.chess-piece');
+                if (capturedPawn) capturedPawn.remove();
                 playSound('Capture');
-            } else if (data.aiIsPromotion) {
-                playSound('Promotion');
-            } else {
-                playSound('Move');
             }
-        }
 
-        function makeAIMove(from, to, data) {
-            const fromSquare = document.querySelector(`.chess-square[data-row='${from.row}'][data-col='${from.col}']`);
-            const toSquare = document.querySelector(`.chess-square[data-row='${to.row}'][data-col='${to.col}']`);
-
-            if (fromSquare && toSquare) {
-                const piece = fromSquare.querySelector('.chess-piece');
-                if (piece) {
-                    // Remove any piece at the destination (for captures)
-                    const capturedPiece = toSquare.querySelector('.chess-piece');
-                    if (capturedPiece) {
-                        capturedPiece.remove();
-                    }
-
-                    // Move the piece to the new square
-                    toSquare.appendChild(piece);
-                    // Update the piece's data attributes
-                    piece.setAttribute('data-row', to.row);
-                    piece.setAttribute('data-col', to.col);
-
-                    // Handle Pawn Promotion
-                    if (data.aiIsPromotion) {
-                        const isWhite = piece.getAttribute('data-piece-color') === 'white';
-                        const queenSymbol = isWhite ? '♕' : '♛';
-                        piece.textContent = queenSymbol;
-                        piece.setAttribute('data-piece-type', 'Queen');
-                        piece.setAttribute('data-piece', queenSymbol);
-                    }
-
-                    // Handle En Passant
-                    if (data.aiIsEnPassantCapture) {
-                        const capturedPawnRow = piece.getAttribute('data-piece-color') === 'white' ? to.row + 1 : to.row - 1;
-                        const capturedPawnSquare = document.querySelector(`.chess-square[data-row='${capturedPawnRow}'][data-col='${to.col}']`);
-                        const capturedPawn = capturedPawnSquare.querySelector('.chess-piece');
-                        if (capturedPawn) {
-                            capturedPawn.remove();
-                        }
-                    }
-                    
-                    // Handle Castling
-                    if (data.aiIsCastle) {
-                        const isKingsideCastle = to.col > from.col;
-                        const rookFromCol = isKingsideCastle ? 7 : 0;
-                        const rookToCol = isKingsideCastle ? to.col - 1 : to.col + 1;
-                        const rookRow = from.row;
-                        const rookFromSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookFromCol}']`);
-                        const rookToSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookToCol}']`);
-                        const rookPiece = rookFromSquare.querySelector('.chess-piece');
-                        if (rookPiece) {
-                            rookToSquare.appendChild(rookPiece);
-                            rookPiece.setAttribute('data-row', rookRow);
-                            rookPiece.setAttribute('data-col', rookToCol);
-                        }
-                    }
-
-                    // Pawn promotion and check sounds do not play when checking the AI, needs fix
-                    // Play AI move sound
-                    playAIMoveSound(data);
-
-                    // Check for game over after AI's move
-                    if (data.isGameOver) {
-                        handleGameOver(data.gameResult);
-                    }
+            function castleRook(piece, fromRow, fromCol, toCol) {
+                const isKingside = toCol > fromCol;
+                const rookFromCol = isKingside ? 7 : 0;
+                const rookToCol = isKingside ? toCol - 1 : toCol + 1;
+                const rookRow = fromRow;
+                const rookFromSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookFromCol}']`);
+                const rookToSquare = document.querySelector(`.chess-square[data-row='${rookRow}'][data-col='${rookToCol}']`);
+                const rookPiece = rookFromSquare.querySelector('.chess-piece');
+                if (rookPiece) {
+                    rookToSquare.appendChild(rookPiece);
+                    rookPiece.dataset.row = rookRow;
+                    rookPiece.dataset.col = rookToCol;
+                    resetPiecePosition(rookPiece);
+                    playSound('Castle');
                 }
             }
-        }
 
-        function handleGameOver(gameResult) {
-            // Play corresponding sound
-            // Needs sounds for these
-            if (gameResult.includes("wins")) {
-                playSound('Victory');
-            } else if (gameResult.includes("draw") || gameResult.includes("stalemate")) {
-                playSound('Stalemate');
-            } else {
-                playSound('Defeat');
-            }
+            function playPlayerMoveSound(data) {
+                if (data.playerIsCheckmate) {
+                    playSound('Checkmate');
+                } else if (data.playerIsCheck) {
+                    playSound('Check');
+                } else if (data.playerIsCastle) {
+                    playSound('Castle');
+                } else if (data.playerIsCapture || data.playerIsEnPassantCapture) {
+                    playSound('Capture');
+                } else if (data.playerIsPromotion) {
 
-            // Display the game result in the modal
-            showGameResultModal(gameResult);
-        }
-
-        function showGameResultModal(message) {
-            const modal = document.getElementById('gameResultModal');
-            const messageElement = document.getElementById('gameResultMessage');
-            messageElement.textContent = message;
-            modal.style.display = 'flex';
-        }
-
-        function closeGameResultModal() {
-            const modal = document.getElementById('gameResultModal');
-            modal.style.display = 'none';
-        }
-
-        function restartGame() {
-            const restartButton = document.querySelector('.restart-button');
-            if (restartButton) {
-                restartButton.disabled = true;
-                restartButton.textContent = 'Restarting...';
-            }
-
-            fetch('/Home/RestartGame', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
-                }
-            }).then(response => {
-                if (response.ok) {
-                    // Reload the page to start a new game
-                    window.location.reload();
                 } else {
-                    alert('Failed to restart the game.');
-                    if (restartButton) {
-                        restartButton.disabled = false;
-                        restartButton.textContent = 'Restart';
+                    playSound('Move');
+                }
+            }
+
+            function playAIMoveSound(data) {
+                if (data.aiIsCheckmate) {
+                    playSound('Checkmate');
+                } else if (data.aiIsCheck) {
+                    playSound('Check');
+                } else if (data.aiIsCastle) {
+                    playSound('Castle');
+                } else if (data.aiIsCapture || data.aiIsEnPassantCapture) {
+                    playSound('Capture');
+                } else if (data.aiIsPromotion) {
+
+                } else {
+                    playSound('Move');
+                }
+            }
+
+            function makeAIMove(from, to, data) {
+                const fromSquare = document.querySelector(`.chess-square[data-row='${from.row}'][data-col='${from.col}']`);
+                const toSquare = document.querySelector(`.chess-square[data-row='${to.row}'][data-col='${to.col}']`);
+
+                if (fromSquare && toSquare) {
+                    const piece = fromSquare.querySelector('.chess-piece');
+                    if (piece) {
+                        const capturedPiece = toSquare.querySelector('.chess-piece');
+                        if (capturedPiece) capturedPiece.remove();
+
+                        toSquare.appendChild(piece);
+                        piece.dataset.row = to.row;
+                        piece.dataset.col = to.col;
+                        resetPiecePosition(piece);
+
+                        // Handle special moves
+                        if (data.aiIsPromotion) {
+                            promotePawn(piece);
+                        }
+                        if (data.aiIsEnPassantCapture) {
+                            captureEnPassant(piece, to.row, to.col);
+                        }
+                        if (data.aiIsCastle) {
+                            castleRook(piece, from.row, from.col, to.col);
+                        }
+
+                        playAIMoveSound(data);
+
+                        if (data.isGameOver) {
+                            handleGameOver(data.gameResult);
+                        }
+
+                        // Update the turn
+                        isWhiteTurn = data.isWhiteTurn;
                     }
                 }
-            }).catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while restarting the game.');
+            }
+
+            function handleGameOver(gameResult) {
+                if (gameResult.includes("wins")) {
+                    playSound('Victory');
+                } else if (gameResult.includes("draw") || gameResult.includes("stalemate")) {
+                    playSound('Stalemate');
+                } else {
+                    playSound('Defeat');
+                }
+
+                showGameResultModal(gameResult);
+            }
+
+            function showGameResultModal(message) {
+                gameResultMessage.textContent = message;
+                gameResultModal.style.display = 'flex';
+            }
+
+            function restartGame() {
+                const restartButton = document.querySelector('.restart-button');
                 if (restartButton) {
-                    restartButton.disabled = false;
-                    restartButton.textContent = 'Restart';
+                    restartButton.disabled = true;
+                    restartButton.textContent = 'Restarting...';
                 }
-            });
-        }
 
-
-        // Close the modal when clicking outside the content
-        window.onclick = function (event) {
-            const modal = document.getElementById('gameResultModal');
-            if (event.target == modal) {
-                modal.style.display = 'none';
+                fetch('/Home/RestartGame', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': requestVerificationToken
+                    }
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            throw new Error('Failed to restart the game.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while restarting the game.');
+                        if (restartButton) {
+                            restartButton.disabled = false;
+                            restartButton.textContent = 'Restart';
+                        }
+                    });
             }
-        }
 
-        function selectAIAndStartGame() {
-            const aiName = document.getElementById('aiSelect').value;
-            if (!aiName) {
-                alert('Please select an AI to start the game.');
-                return;
+            function selectAIAndStartGame() {
+                const aiSelect = document.getElementById('aiSelect');
+                const aiName = aiSelect ? aiSelect.value : null;
+                if (!aiName) {
+                    alert('Please select an AI to start the game.');
+                    return;
+                }
+
+                fetch('/Home/SelectAI', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': requestVerificationToken
+                    },
+                    body: JSON.stringify({ AIName: aiName })
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            throw new Error('Failed to select AI.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while selecting the AI.');
+                    });
             }
 
-            fetch('/Home/SelectAI', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
-                },
-                body: JSON.stringify({ AIName: aiName })
-            }).then(response => {
-                if (response.ok) {
-                    // Reload the page to start the game
-                    window.location.reload();
-                } else {
-                    alert('Failed to select AI.');
-                }
-            }).catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while selecting the AI.');
-            });
-        }
+            function setGameMode(mode) {
+                fetch('/Home/SetGameMode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': requestVerificationToken
+                    },
+                    body: JSON.stringify({ GameMode: mode })
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            throw new Error('Failed to set game mode.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while setting the game mode.');
+                    });
+            }
 
-        // Set game mode when gamemode buttons are pressed
-        function setGameMode(mode) {
-            fetch('/Home/SetGameMode', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': document.getElementById('RequestVerificationToken').value
-                },
-                body: JSON.stringify({ GameMode: mode })
-            }).then(response => {
-                if (response.ok) {
-                    // Reload the page to apply changes
-                    window.location.reload();
-                } else {
-                    alert('Failed to set game mode.');
+            // Debounce function to limit the rate at which a function can fire.
+            function throttle(fn, limit) {
+                let lastFunc;
+                let lastRan;
+                return function (...args) {
+                    const context = this;
+                    if (!lastRan) {
+                        fn.apply(context, args);
+                        lastRan = Date.now();
+                    } else {
+                        clearTimeout(lastFunc);
+                        lastFunc = setTimeout(function () {
+                            if ((Date.now() - lastRan) >= limit) {
+                                fn.apply(context, args);
+                                lastRan = Date.now();
+                            }
+                        }, limit - (Date.now() - lastRan));
+                    }
                 }
-            }).catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while setting the game mode.');
-            });
-        }
+            }
+
+            // Expose functions to global scope
+            window.restartGame = restartGame;
+            window.selectAIAndStartGame = selectAIAndStartGame;
+            window.setGameMode = setGameMode;
+        })();
     </script>
 
     @functions {
@@ -667,17 +678,6 @@
                 return "";
         }
     }
-
-    <!-- Loads Sounds -->
-    <audio id="soundMove" src="/sounds/move.mp3" preload="auto"></audio>
-    <audio id="soundCheck" src="/sounds/check.mp3" preload="auto"></audio>
-    <audio id="soundCheckmate" src="/sounds/checkmate.mp3" preload="auto"></audio>
-    <audio id="soundCastle" src="/sounds/castle.mp3" preload="auto"></audio>
-    <audio id="soundCapture" src="/sounds/capture.mp3" preload="auto"></audio>
-    <audio id="soundPromotion" src="/sounds/promotion.mp3" preload="auto"></audio>
-    <audio id="soundVictory" src="/sounds/victory.mp3" preload="auto"></audio>
-    <audio id="soundStalemate" src="/sounds/stalemate.mp3" preload="auto"></audio>
-    <audio id="soundDefeat" src="/sounds/defeat.mp3" preload="auto"></audio>
 
 </body>
 </html>
