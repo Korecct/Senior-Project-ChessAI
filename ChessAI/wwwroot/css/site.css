@@ -35,7 +35,6 @@ body {
     flex-direction: column;
 }
 
-/* Background for Glass Blur Effect */
 body::before {
     content: "";
     position: fixed;
@@ -44,7 +43,6 @@ body::before {
     width: 100%;
     height: 100%;
     background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(20px);
     z-index: -1;
     transition: background var(--transition-speed);
 }
@@ -55,7 +53,6 @@ body.dm {
 
     body.dm::before {
         background: rgba(18, 18, 18, 0.6);
-        backdrop-filter: blur(20px);
     }
 
 /* Label Styles */
