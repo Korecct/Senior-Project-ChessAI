@@ -1,54 +1,72 @@
-html {
-    position: relative;
-    min-height: 100%;
-}
-
-@media (min-width: 768px) {
-    html {
-    }
+:root {
+    --transition-speed: 0.2s;
+    --highlight-color: rgba(0, 0, 0, 0.3);
+    --highlight-color-dark: rgba(40, 0, 0, 0.7);
+    --pulse-duration: 2s;
+    --board-border-color: #000;
+    --board-border-color-dark: #ff6262;
+    --highlight-bg-light: rgba(255, 255, 0, 0.5);
+    --highlight-bg-dark: rgba(40, 0, 0, 0.7);
+    --piece-transition: transform 0.3s ease, color var(--transition-speed);
+    --square-transition: background-color var(--transition-speed);
+    --button-transition: background-color 0.3s, box-shadow 0.3s;
+    --modal-transition: background-color var(--transition-speed), box-shadow var(--transition-speed);
+    --checkbox-transition: box-shadow var(--transition-speed);
 }
 
 /* Body Styles */
 body {
-    margin-bottom: 60px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     background: url('../images/background-chess.jpg') no-repeat center center fixed;
     background-size: cover;
     color: black;
-    transition: background-color 0.2s, color 0.2s;
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+    position: relative;
+    overflow-x: hidden;
+    padding-bottom: 60px;
 }
 
-    /* Background for Glass Blur Effect */
-    body::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.6);
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Background for Glass Blur Effect */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(20px);
+    z-index: -1;
+    transition: background var(--transition-speed);
+}
+
+body.dm {
+    color: #ffffff;
+}
+
+    body.dm::before {
+        background: rgba(18, 18, 18, 0.6);
         backdrop-filter: blur(20px);
-        z-index: -1;
     }
-
-    body.dm {
-        color: #ffffff;
-    }
-
-        body.dm::before {
-            background: rgba(18, 18, 18, 0.6);
-            backdrop-filter: blur(20px);
-        }
 
 /* Label Styles */
 label {
-    color: black;
-    transition: color 0.2s;
+    color: inherit;
+    transition: color var(--transition-speed);
     font-size: 1.2rem;
 }
 
 body.dm label {
-    color: white;
-    
+    color: #fff;
 }
 
 /* Focus Styles for Interactive Elements */
@@ -56,16 +74,17 @@ body.dm label {
 .btn:active:focus,
 .btn-link.nav-link:focus,
 .form-control:focus,
-.form-check-input:focus {
+.form-check-input:focus,
+.switch input:focus + .slider {
     box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
 }
 
-/* Dark Mode Focus Styles */
 body.dm .btn:focus,
 body.dm .btn:active:focus,
 body.dm .btn-link.nav-link:focus,
 body.dm .form-control:focus,
-body.dm .form-check-input:focus {
+body.dm .form-check-input:focus,
+body.dm .switch input:focus + .slider {
     box-shadow: 0 0 0 0.1rem black, 0 0 0 0.25rem #258cfb;
 }
 
@@ -83,6 +102,7 @@ body.dm .form-check-input:focus {
     width: 50px;
     height: 25px;
 }
+
     .switch input {
         opacity: 0;
         width: 0;
@@ -97,12 +117,12 @@ body.dm .form-check-input:focus {
     right: 0;
     bottom: 0;
     background-color: #888;
-    transition: 0.4s;
+    transition: background-color 0.4s, transform 0.4s;
     border-radius: 25px;
     box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.5);
 }
 
-    .slider:before {
+    .slider::before {
         position: absolute;
         content: "";
         height: 17px;
@@ -110,8 +130,9 @@ body.dm .form-check-input:focus {
         left: 4px;
         bottom: 4px;
         background-color: white;
-        transition: 0.4s;
+        transition: transform 0.4s;
         border-radius: 50%;
+        will-change: transform;
     }
 
 /* Checked state */
@@ -120,12 +141,12 @@ body.dm .form-check-input:focus {
 }
 
     /* Move the slider when checked */
-    .switch input:checked + .slider:before {
+    .switch input:checked + .slider::before {
         transform: translateX(25px);
     }
 
 /* Ensure switch visibility in both modes */
-body .slider {
+.slider {
     background-color: #888;
 }
 
@@ -150,13 +171,13 @@ body.dm .switch-label {
         height: 20px;
     }
 
-    .slider:before {
+    .slider::before {
         height: 14px;
         width: 14px;
         bottom: 3px;
     }
 
-    .switch input:checked + .slider:before {
+    .switch input:checked + .slider::before {
         transform: translateX(20px);
     }
 
@@ -170,7 +191,7 @@ body.dm .switch-label {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    gap: 20px;
+    gap: 5px;
     width: 100%;
     margin-top: 5px;
     flex-wrap: nowrap;
@@ -185,11 +206,11 @@ body.dm .switch-label {
 
 .side-panel {
     width: 200px;
-    flex-shrink: 0;
+    flex-shrink: 1;
 }
 
-/* Responsive elements */
-@media (max-width: 1330px) {
+/* Responsive Elements */
+@media (max-width: 568px) {
     .main-container {
         flex-direction: column;
         align-items: center;
@@ -203,54 +224,53 @@ body.dm .switch-label {
 
 /* Chess Board Styles */
 .chess-board {
-    --board-size: 90vmin; /* Board size variable */
+    --board-size: 85vmin; /* Board size variable */
     width: var(--board-size);
-    height: auto; /* maintain aspect ratio */
     aspect-ratio: 1; /* Maintains the 1:1 aspect ratio to keep the board square */
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
     gap: 0;
-    border: 2px solid #000;
+    border: 2px solid var(--board-border-color);
     position: relative;
-    transition: border-color 0.2s;
+    transition: border-color var(--transition-speed);
     touch-action: manipulation;
 }
 
 body.dm .chess-board {
-    border-color: #ff6262;
+    border-color: var(--board-border-color-dark);
 }
 
+/* Chess Square Styles */
 .chess-square {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-width: 0; /* Prevents the square from expanding */
-    min-height: 0; /* Prevents the square from expanding */
-    position: relative; /* Set to relative to position pieces absolutely within */
+    position: relative; /* Position pieces absolutely within */
     user-select: none;
-    transition: background-color 0.2s;
+    transition: background-color var(--transition-speed);
+    will-change: background-color;
 }
 
-.black {
-    background-color: #a16868;
-}
+    .chess-square.black {
+        background-color: #a16868;
+    }
 
-.white {
-    background-color: #a290ff;
-}
+    .chess-square.white {
+        background-color: #a290ff;
+    }
 
-body.dm .black {
+body.dm .chess-square.black {
     background-color: #4c3838;
 }
 
-body.dm .white {
+body.dm .chess-square.white {
     background-color: #bdbdbd;
 }
 
 /* Chess Piece Styles */
 .chess-piece {
-    will-change: transform;
+    will-change: transform, color;
     font-size: calc((var(--board-size) / 8) * 0.7);
     font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
     user-select: none;
@@ -262,7 +282,7 @@ body.dm .white {
     display: flex;
     justify-content: center;
     align-items: center;
-    transition: transform 0.5s ease-in-out;
+    transition: transform var(--piece-transition), color var(--transition-speed);
     color: inherit;
 }
 
@@ -290,15 +310,16 @@ body.dm .chess-piece.black-piece {
     position: absolute;
     width: 20%;
     height: 20%;
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: var(--highlight-bg-light);
     border-radius: 50%;
     top: 40%;
     left: 40%;
-    animation: pulse 2s infinite;
+    animation: pulse var(--pulse-duration) infinite;
+    will-change: transform, opacity;
 }
 
 body.dm .chess-square.highlight::after {
-    background-color: rgba(40, 0, 0, 0.7);
+    background-color: var(--highlight-bg-dark);
 }
 
 /* Pulse Animation */
@@ -319,18 +340,19 @@ body.dm .chess-square.highlight::after {
     }
 }
 
+/* Game Mode Buttons */
 .gamemode-button {
     display: block;
     width: 100%;
     margin-top: 10px;
-    padding: 2px 20px;
+    padding: 8px 20px; /* Increased padding for better touch targets */
     font-size: 1.2rem;
     background-color: #007BFF;
     color: white;
-    box-shadow: 0px 4px 4px 0px #000;
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.2);
     cursor: pointer;
     border-radius: 5px;
-    transition: background-color 0.3s, box-shadow 0.3s;
+    transition: background-color var(--button-transition), box-shadow var(--button-transition);
     text-align: center;
     border: none;
 }
@@ -341,13 +363,13 @@ body.dm .chess-square.highlight::after {
 
     .gamemode-button.active {
         background-color: #665aa4;
-        box-shadow: 0px 6px 6px 0px #000;
+        box-shadow: 0px 6px 6px rgba(0, 0, 0, 0.3);
     }
 
 body.dm .gamemode-button {
     background-color: #4c3838;
     color: white;
-    box-shadow: 0px 4px 4px 0px #fff;
+    box-shadow: 0px 4px 4px rgba(255, 255, 255, 0.2);
 }
 
     body.dm .gamemode-button:hover {
@@ -356,21 +378,24 @@ body.dm .gamemode-button {
 
     body.dm .gamemode-button.active {
         background-color: #936262;
-        box-shadow: 0px 6px 6px 0px #fff;
+        box-shadow: 0px 6px 6px rgba(255, 255, 255, 0.3);
     }
 
 /* Game Mode Indicator */
+.game-mode-indicator,
+.turn-mode-indicator {
+    padding: 10px 5px;
+    border: 2px solid #ff6262;
+    border-radius: 5px;
+    text-align: center;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
 .game-mode-indicator {
     margin-bottom: 10px;
-    padding: 10px 20px;
     background-color: rgba(255, 255, 255, 0.59);
-    border: 2px solid #ff6262;
-    font-size: 1.0rem;
+    font-size: 1rem;
     font-weight: bold;
-    width: 100%;
-    border-radius: 5px;
-    transition: background-color 0.2s, border-color 0.2s;
-    text-align: center;
 }
 
     .game-mode-indicator strong {
@@ -393,10 +418,6 @@ body.dm .game-mode-indicator {
     border: 2px solid #ff6262;
     font-size: 1.2rem;
     font-weight: bold;
-    width: 100%;
-    border-radius: 5px;
-    transition: background-color 0.2s, border-color 0.2s;
-    text-align: center;
 }
 
     .turn-mode-indicator strong {
@@ -414,15 +435,15 @@ body.dm .turn-mode-indicator {
 
 /* Navigate Button */
 .navigate-button {
-    margin-top: 20px; /* Spacing above the button */
+    margin-top: 20px;
     padding: 10px 20px;
-    font-size: 16px;
+    font-size: 1rem;
     background-color: #007BFF;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s, box-shadow 0.3s;
+    transition: background-color var(--button-transition), box-shadow var(--button-transition);
 }
 
     .navigate-button:hover {
@@ -438,20 +459,165 @@ body.dm .navigate-button {
         background-color: #2c4e6a;
     }
 
-body.dm .navbar-toggler {
-    border-color: rgba(255, 255, 255, 0.5);
+/* Navbar Styles */
+.navbar {
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
 }
 
-body.dm .navbar-toggler-icon {
-    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255, 255, 255, 0.9)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+.navbar-nav .nav-link {
+    padding: 0.5rem 1rem;
 }
+
+body.dm .navbar {
+    background-color: rgba(51, 51, 51, 0.9) !important;
+    border-bottom: 1px solid #444;
+}
+
+    body.dm .navbar .nav-link {
+        color: #fff !important;
+        transition: color var(--transition-speed);
+    }
+
+        body.dm .navbar .nav-link:hover {
+            color: #ddd !important;
+        }
+
+body.dm .navbar-brand {
+    color: #fff !important;
+    transition: color var(--transition-speed);
+}
+
+    body.dm .navbar-brand:hover {
+        color: #ddd !important;
+    }
+
+/* Form Controls */
+.form-control {
+    transition: background-color var(--transition-speed), color var(--transition-speed), border-color var(--transition-speed);
+}
+
+body.dm .form-control {
+    background-color: rgba(85, 85, 85, 0.7);
+    color: #ddd;
+    border: 1px solid #777;
+}
+
+    body.dm .form-control:focus {
+        background-color: rgba(102, 102, 102, 0.7);
+        color: #fff;
+        border-color: #4da6ff;
+    }
+
+select {
+    transition: background-color var(--transition-speed), color var(--transition-speed), border-color var(--transition-speed);
+}
+
+body.dm select {
+    background-color: rgba(85, 85, 85, 0.7);
+    color: #ddd;
+    border: 1px solid #777;
+}
+
+    body.dm select:focus {
+        background-color: rgba(102, 102, 102, 0.7);
+        color: #fff;
+        border-color: #4da6ff;
+    }
+
+/* Links Dark Mode */
+body.dm a {
+    color: #4da6ff;
+    transition: color var(--transition-speed);
+}
+
+    body.dm a:hover {
+        color: #66b3ff;
+    }
+
+/* Game Result Modal Styles */
+.game-result-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity var(--transition-speed);
+}
+
+.game-result-content {
+    background-color: #fff;
+    padding: 20px 40px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: background-color var(--modal-transition), box-shadow var(--modal-transition);
+}
+
+body.dm .game-result-content {
+    background-color: rgba(51, 51, 51, 0.9);
+    color: #ddd;
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
+}
+
+.game-result-message {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+    display: block;
+}
+
+.game-result-content button {
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    border: none;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 4px;
+    transition: background-color var(--button-transition);
+    margin: 5px;
+}
+
+    .game-result-content button:hover {
+        background-color: #45a049;
+    }
+
+    .game-result-content button.close-button {
+        background-color: #f44336;
+    }
+
+        .game-result-content button.close-button:hover {
+            background-color: #da190b;
+        }
+
+body.dm .game-result-content button {
+    background-color: rgba(106, 168, 79, 0.8);
+    color: white;
+    transition: background-color var(--button-transition);
+}
+
+    body.dm .game-result-content button:hover {
+        background-color: rgba(83, 128, 52, 0.8);
+    }
+
+    body.dm .game-result-content button.close-button {
+        background-color: rgba(224, 102, 102, 0.8);
+    }
+
+        body.dm .game-result-content button.close-button:hover {
+            background-color: rgba(204, 0, 0, 0.8);
+        }
 
 /* Selected AI Cue Styles */
 .selected-ai-cue {
     margin-top: 10px;
     font-size: 1.5em;
     color: #333;
-    transition: color 0.2s;
+    transition: color var(--transition-speed);
 }
 
     .selected-ai-cue span {
@@ -465,12 +631,12 @@ body.dm .selected-ai-cue {
 /* AI Selection Container Styles */
 .ai-selection-container {
     margin-bottom: 20px;
-    padding: 10px;
+    padding: 5px;
     border: 2px solid #ff6262;
     background-color: rgba(255, 255, 255, 0.59);
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
     text-align: center;
 }
 
@@ -482,21 +648,21 @@ body.dm .ai-selection-container {
 
 /* AI Select Dropdown */
 #aiSelect {
-    padding: 2px 12px;
+    padding: 8px 12px; /* Increased padding for better touch targets */
     font-size: 1.2rem;
     border: 2px solid #ff6262;
     border-radius: 5px;
     background-color: #fff;
     color: #333;
     cursor: pointer;
-    transition: border-color 0.3s, box-shadow 0.3s, background-color 0.2s, color 0.2s;
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed), background-color var(--transition-speed), color var(--transition-speed);
     width: 100%;
     margin-bottom: 10px;
 }
 
     #aiSelect:hover {
         border-color: #c54c4c;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
 
 body.dm #aiSelect {
@@ -506,26 +672,26 @@ body.dm #aiSelect {
 
     body.dm #aiSelect:hover {
         border-color: #c54c4c;
-        box-shadow: 0px 4px 8px rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
     }
 
 /* Start Game Button */
 button[type="button"].ai-button {
-    padding: 2px 2px;
+    padding: 10px 20px; /* Increased padding for better touch targets */
     font-size: 1.2rem;
     background-color: #a290ff;
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s, box-shadow 0.3s;
+    transition: background-color var(--button-transition), box-shadow var(--button-transition);
     width: 100%;
     margin-bottom: 10px;
 }
 
     button[type="button"].ai-button:hover {
         background-color: #7b6cc5;
-        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
 
 body.dm button[type="button"].ai-button {
@@ -535,7 +701,7 @@ body.dm button[type="button"].ai-button {
 
     body.dm button[type="button"].ai-button:hover {
         background-color: #3a2a2a;
-        box-shadow: 0px 4px 8px rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
     }
 
 /* Disabled Chessboard Overlay Styles */
@@ -559,6 +725,7 @@ body.dm button[type="button"].ai-button {
         font-weight: bold;
         z-index: 2;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        transition: background-color var(--transition-speed), color var(--transition-speed), box-shadow var(--transition-speed);
     }
 
 body.dm .chess-board.disabled::after {
@@ -566,113 +733,14 @@ body.dm .chess-board.disabled::after {
     color: white;
 }
 
-/* Game Result Modal Styles */
-.game-result-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+/* Navbar Toggler Styles for Dark Mode */
+body.dm .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.5);
 }
 
-.game-result-content {
-    background-color: #fff;
-    padding: 20px 40px;
-    border-radius: 8px;
-    text-align: center;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.2s, box-shadow 0.2s;
+body.dm .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255, 255, 255, 0.9)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
 }
-
-body.dm .game-result-content {
-    background-color: rgba(51, 51, 51, 0.9);
-    color: #fff;
-    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
-}
-
-.game-result-message {
-    font-size: 1.5em;
-    margin-bottom: 20px;
-    display: block;
-}
-
-.game-result-content button {
-    padding: 10px 20px;
-    font-size: 1em;
-    cursor: pointer;
-    border: none;
-    background-color: #4CAF50;
-    color: white;
-    border-radius: 4px;
-    transition: background-color 0.3s;
-    margin: 5px;
-}
-
-    .game-result-content button:hover {
-        background-color: #45a049;
-    }
-
-    .game-result-content button.close-button {
-        background-color: #f44336;
-    }
-
-        .game-result-content button.close-button:hover {
-            background-color: #da190b;
-        }
-
-body.dm .game-result-content button {
-    background-color: rgba(106, 168, 79, 0.8);
-    color: white;
-}
-
-    body.dm .game-result-content button:hover {
-        background-color: rgba(83, 128, 52, 0.8);
-    }
-
-    body.dm .game-result-content button.close-button {
-        background-color: rgba(224, 102, 102, 0.8);
-    }
-
-        body.dm .game-result-content button.close-button:hover {
-            background-color: rgba(204, 0, 0, 0.8);
-        }
-
-/* Navbar Styles */
-.navbar {
-    transition: background-color 0.2s, border-color 0.2s;
-}
-
-.navbar-nav .nav-link {
-    padding: 0.5rem 1rem;
-}
-
-body.dm .navbar {
-    background-color: rgba(51, 51, 51, 0.9) !important;
-    border-bottom: 1px solid #444;
-}
-
-    body.dm .navbar .nav-link {
-        color: #fff !important;
-        transition: color 0.2s;
-    }
-
-        body.dm .navbar .nav-link:hover {
-            color: #ddd !important;
-        }
-
-body.dm .navbar-brand {
-    color: #fff !important;
-    transition: color 0.2s;
-}
-
-    body.dm .navbar-brand:hover {
-        color: #ddd !important;
-    }
 
 /* Footer Styles */
 .footer {
@@ -693,46 +761,6 @@ body.dm .footer {
             color: #66b3ff;
         }
 
-body.dm .form-control {
-    background-color: rgba(85, 85, 85, 0.7);
-    color: #ddd;
-    border: 1px solid #777;
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-}
-
-    body.dm .form-control:focus {
-        background-color: rgba(102, 102, 102, 0.7);
-        color: #fff;
-        border-color: #4da6ff;
-    }
-
-body.dm select {
-    background-color: rgba(85, 85, 85, 0.7);
-    color: #ddd;
-    border: 1px solid #777;
-}
-
-    body.dm select:focus {
-        background-color: rgba(102, 102, 102, 0.7);
-        color: #fff;
-        border-color: #4da6ff;
-    }
-
-/* Links Dark mode */
-body.dm a {
-    color: #4da6ff;
-    transition: color 0.2s;
-}
-
-    body.dm a:hover {
-        color: #66b3ff;
-    }
-
-body.dm .modal-content {
-    background-color: rgba(68, 68, 68, 0.9);
-    color: #ddd;
-}
-
 body,
 .navbar,
 .footer,
@@ -747,5 +775,5 @@ button[type="button"],
 .game-result-content,
 .form-control,
 .select {
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    transition: background-color var(--transition-speed), color var(--transition-speed), border-color var(--transition-speed);
 }

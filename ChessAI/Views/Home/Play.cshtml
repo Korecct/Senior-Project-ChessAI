@@ -74,14 +74,14 @@
                 }
                 else
                 {
-                    <span>It's <strong>@(Model.IsWhiteTurn ? "White's" : "Black's")</strong> turn.</span>
+                    <span><strong>@(Model.IsWhiteTurn ? "White's" : "Black's")</strong> turn.</span>
                     @if (Model.IsWhiteKingInCheck)
                     {
-                        <div class="check-indicator">White king is in check!</div>
+                        <div class="check-indicator">White check!</div>
                     }
                     @if (Model.IsBlackKingInCheck)
                     {
-                        <div class="check-indicator">Black king is in check!</div>
+                        <div class="check-indicator">Black check!</div>
                     }
                 }
             </div>
@@ -142,7 +142,6 @@
                 Stalemate: new Audio('/sounds/stalemate.mp3'),
                 Victory: new Audio('/sounds/victory.mp3'),
                 Defeat: new Audio('/sounds/defeat.mp3'),
-                AIThinking: new Audio('/sounds/ai-thinking.mp3')
             };
 
             // Preload sounds
@@ -335,12 +334,12 @@
                     return;
                 }
 
-                let html = `<span>It's <strong>${isWhiteTurnParam ? "White's" : "Black's"}</strong> turn.</span>`;
+                let html = `<span><strong>${isWhiteTurnParam ? "White's" : "Black's"}</strong> turn.</span>`;
                 if (isWhiteKingInCheck) {
-                    html += '<div class="check-indicator">White king is in check!</div>';
+                    html += '<div class="check-indicator">White check!</div>';
                 }
                 if (isBlackKingInCheck) {
-                    html += '<div class="check-indicator">Black king is in check!</div>';
+                    html += '<div class="check-indicator">Black check!</div>';
                 }
                 turnIndicator.innerHTML = html;
             }
@@ -375,7 +374,6 @@
 
                         if (data.aiMove) {
                             updateTurnIndicator(null, null, null, false, "AI is thinking...");
-                            playSound('AIThinking');
                             setTimeout(() => {
                                 makeAIMove(data.aiMove.from, data.aiMove.to, data);
                                 updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
