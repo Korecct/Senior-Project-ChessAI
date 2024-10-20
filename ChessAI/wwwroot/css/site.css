@@ -324,7 +324,7 @@ body.dm .chess-piece.black-piece {
     position: absolute;
     width: 20%;
     height: 20%;
-    background-color: var(--highlight-bg-light);
+    background-color: var(--highlight-color);
     border-radius: 50%;
     top: 40%;
     left: 40%;
@@ -361,7 +361,7 @@ body.dm .chess-square.highlight::after {
     margin-top: 10px;
     padding: 8px 20px; /* Increased padding for better touch targets */
     font-size: 1.2rem;
-    background-color: #007BFF;
+    background-color: #a290ff;
     color: white;
     box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.2);
     cursor: pointer;
@@ -372,7 +372,7 @@ body.dm .chess-square.highlight::after {
 }
 
     .gamemode-button:hover {
-        background-color: #0056b3;
+        background-color: #7b6cc5;
     }
 
     .gamemode-button.active {
@@ -399,9 +399,13 @@ body.dm .gamemode-button {
 .game-mode-indicator,
 .turn-mode-indicator {
     padding: 10px 5px;
-    border: 2px solid #ff6262;
+    border: 2px solid var(--board-border-color);
+    background-color: rgba(255, 255, 255, 0.59);
+    margin-bottom: 10px;
     border-radius: 5px;
     text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
     transition: background-color var(--transition-speed), border-color var(--transition-speed);
 }
 
@@ -424,15 +428,6 @@ body.dm .game-mode-indicator {
     body.dm .game-mode-indicator strong {
         color: #ff6262;
     }
-
-.turn-mode-indicator {
-    margin-bottom: 10px;
-    padding: 5px 20px;
-    background-color: rgba(255, 255, 255, 0.59);
-    border: 2px solid #ff6262;
-    font-size: 1.2rem;
-    font-weight: bold;
-}
 
     .turn-mode-indicator strong {
         color: #a290ff;
@@ -646,7 +641,7 @@ body.dm .selected-ai-cue {
 .ai-selection-container {
     margin-bottom: 20px;
     padding: 5px;
-    border: 2px solid #ff6262;
+    border: 2px solid var(--board-border-color);
     background-color: rgba(255, 255, 255, 0.59);
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -664,7 +659,7 @@ body.dm .ai-selection-container {
 #aiSelect {
     padding: 8px 12px; /* Increased padding for better touch targets */
     font-size: 1.2rem;
-    border: 2px solid #ff6262;
+    border: 2px solid var(--board-border-color);
     border-radius: 5px;
     background-color: #fff;
     color: #333;
@@ -681,6 +676,7 @@ body.dm .ai-selection-container {
 
 body.dm #aiSelect {
     background-color: rgba(102, 102, 102, 0.7);
+    border-color: #ff6262;
     color: #ddd;
 }
 
