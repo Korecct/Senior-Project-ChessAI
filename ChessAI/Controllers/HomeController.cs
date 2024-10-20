@@ -101,8 +101,9 @@ namespace ChessAI.Controllers
                 IsWhiteTurn = newGame.IsWhiteTurn,
                 IsWhiteKingInCheck = newGame.Board.IsKingInCheck(true),
                 IsBlackKingInCheck = newGame.Board.IsKingInCheck(false),
-                IsGameOver = newGame.IsGameOver,
-                GameResult = newGame.GameResult
+                GameResult = newGame.GameResult,
+                HalfMoveClock = newGame.HalfMoveClock,
+                FullMoveNumber = newGame.FullMoveNumber
             };
 
             return Json(response);
@@ -119,6 +120,8 @@ namespace ChessAI.Controllers
             public bool IsBlackKingInCheck { get; set; }
             public bool IsGameOver { get; set; }
             public string GameResult { get; set; }
+            public int HalfMoveClock { get; set; }
+            public int FullMoveNumber { get; set; }
         }
 
         [HttpPost]
@@ -240,6 +243,8 @@ namespace ChessAI.Controllers
                 PlayerIsPromotion = isPromotion,
                 PlayerIsCastle = isCastle,
                 PlayerIsEnPassantCapture = isEnPassantCapture,
+                HalfMoveClock = game.HalfMoveClock,
+                FullMoveNumber = game.FullMoveNumber,
                 AIMove = null,
                 AIIsCheckmate = false,
                 AIIsCheck = false,
@@ -524,6 +529,8 @@ namespace ChessAI.Controllers
             public bool AIIsEnPassantCapture { get; set; }
             public bool IsWhiteKingInCheck { get; set; }
             public bool IsBlackKingInCheck { get; set; }
+            public int HalfMoveClock { get; set; }
+            public int FullMoveNumber { get; set; }
         }
 
         public class AIMoveResponse

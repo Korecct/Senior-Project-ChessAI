@@ -59,9 +59,9 @@ namespace ChessAI.Models
             Squares[0][4] = new King { IsWhite = false, Position = (0, 4) };//E8
         }
 
-        public string GenerateFEN(bool isWhiteTurn)
+        public string GenerateFEN(bool isWhiteTurn, int halfMoveClock, int fullMoveNumber)
         {
-            StringBuilder fen = new StringBuilder();
+            StringBuilder fen = new();
 
             // Piece positions
             for (int row = 0; row < 8; row++)
@@ -109,13 +109,126 @@ namespace ChessAI.Models
 
             fen.Append(isWhiteTurn ? " w " : " b ");
 
-            fen.Append("KQkq ");
+            // Castling availability
+            string castling = "";
+            bool whiteKingside = Squares[7][4] is King whiteKing && !whiteKing.HasMoved && Squares[7][7] is Rook whiteRookH1 && !whiteRookH1.HasMoved;
+            bool whiteQueenside = Squares[7][4] is King && !((King)Squares[7][4]).HasMoved && Squares[7][0] is Rook whiteRookA1 && !whiteRookA1.HasMoved;
+            bool blackKingside = Squares[0][4] is King blackKing && !blackKing.HasMoved && Squares[0][7] is Rook blackRookH8 && !blackRookH8.HasMoved;
+            bool blackQueenside = Squares[0][4] is King && !((King)Squares[0][4]).HasMoved && Squares[0][0] is Rook blackRookA8 && !blackRookA8.HasMoved;
+
+            if (whiteKingside) castling += "K";
+            if (whiteQueenside) castling += "Q";
+            if (blackKingside) castling += "k";
+            if (blackQueenside) castling += "q";
+
+            fen.Append(string.IsNullOrEmpty(castling) ? "-" : castling);
+            fen.Append(' ');
 
             // En passant target square
-            fen.Append("- "); // Placeholder
+            string enPassant = "-";
+            foreach (var rowPieces in Squares)
+            {
+                foreach (var p in rowPieces)
+                {
+                    if (p is Pawn pawn && pawn.EnPassantEligible)
+                    {
+                        enPassant = $"{(char)('a' + pawn.Position.Col)}{8 - pawn.Position.Row}";
+                        break;
+                    }
+                }
+                if (enPassant != "-") break;
+            }
+            fen.Append(enPassant);
+            fen.Append(' ');
 
-            // Halfmove clock and fullmove number
-            fen.Append("0 1"); // Placeholder
+            // Halfmove clock and Fullmove number
+            fen.Append($"{halfMoveClock} {fullMoveNumber}");
+
+            return fen.ToString();
+        }
+
+        /// Generates the FEN string excluding HalfMoveClock and FullMoveNumber for repetition tracking.
+        public string GenerateRepetitionFEN(bool isWhiteTurn)
+        {
+            StringBuilder fen = new();
+
+            // Piece positions
+            for (int row = 0; row < 8; row++)
+            {
+                int emptyCount = 0;
+                for (int col = 0; col < 8; col++)
+                {
+                    var piece = Squares[row][col];
+                    if (piece == null)
+                    {
+                        emptyCount++;
+                    }
+                    else
+                    {
+                        if (emptyCount > 0)
+                        {
+                            fen.Append(emptyCount);
+                            emptyCount = 0;
+                        }
+
+                        char pieceChar = piece switch
+                        {
+                            Pawn p => p.IsWhite ? 'P' : 'p',
+                            Rook r => r.IsWhite ? 'R' : 'r',
+                            Knight n => n.IsWhite ? 'N' : 'n',
+                            Bishop b => b.IsWhite ? 'B' : 'b',
+                            Queen q => q.IsWhite ? 'Q' : 'q',
+                            King k => k.IsWhite ? 'K' : 'k',
+                            _ => throw new Exception("Unknown piece type")
+                        };
+                        fen.Append(pieceChar);
+                    }
+                }
+
+                if (emptyCount > 0)
+                {
+                    fen.Append(emptyCount);
+                }
+
+                if (row < 7)
+                {
+                    fen.Append('/');
+                }
+            }
+
+            fen.Append(isWhiteTurn ? " w " : " b ");
+
+            // Castling availability
+            string castling = "";
+            bool whiteKingside = Squares[7][4] is King whiteKingForCastling && !whiteKingForCastling.HasMoved && Squares[7][7] is Rook whiteRookH1ForCastling && !whiteRookH1ForCastling.HasMoved;
+            bool whiteQueenside = Squares[7][4] is King && !((King)Squares[7][4]).HasMoved && Squares[7][0] is Rook whiteRookA1ForCastling && !whiteRookA1ForCastling.HasMoved;
+            bool blackKingside = Squares[0][4] is King blackKingForCastling && !blackKingForCastling.HasMoved && Squares[0][7] is Rook blackRookH8ForCastling && !blackRookH8ForCastling.HasMoved;
+            bool blackQueenside = Squares[0][4] is King && !((King)Squares[0][4]).HasMoved && Squares[0][0] is Rook blackRookA8ForCastling && !blackRookA8ForCastling.HasMoved;
+
+            if (whiteKingside) castling += "K";
+            if (whiteQueenside) castling += "Q";
+            if (blackKingside) castling += "k";
+            if (blackQueenside) castling += "q";
+
+            fen.Append(string.IsNullOrEmpty(castling) ? "-" : castling);
+            fen.Append(' ');
+
+            // En passant target square
+            string enPassant = "-";
+            foreach (var rowPieces in Squares)
+            {
+                foreach (var p in rowPieces)
+                {
+                    if (p is Pawn pawn && pawn.EnPassantEligible)
+                    {
+                        enPassant = $"{(char)('a' + pawn.Position.Col)}{8 - pawn.Position.Row}";
+                        break;
+                    }
+                }
+                if (enPassant != "-") break;
+            }
+            fen.Append(enPassant);
+
 
             return fen.ToString();
         }

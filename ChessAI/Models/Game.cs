@@ -9,6 +9,13 @@ namespace ChessAI.Models
         public string GameResult { get; set; } = "Ongoing";
         public List<string> BoardHistory { get; set; } = new List<string>();
 
+        // 50-Move Rule
+
+        // Tracks the number of half-moves since last capture or pawn move
+        public int HalfMoveClock { get; set; } = 0;
+        // Tracks the number of full moves
+        public int FullMoveNumber { get; set; } = 1;
+
         public bool MakeMove((int Row, int Col) from, (int Row, int Col) to, ILogger logger)
         {
             var piece = Board.Squares[from.Row][from.Col];
@@ -73,6 +80,8 @@ namespace ChessAI.Models
                 var capturedPiece = Board.Squares[to.Row][to.Col];
                 var (Row, Col) = piece.Position;
 
+                bool isEnPassantCapture = false;
+
                 // Castling
                 if (piece is King king && Math.Abs(to.Col - from.Col) == 2)
                 {
@@ -80,6 +89,12 @@ namespace ChessAI.Models
                     int rookFromCol = to.Col > from.Col ? 7 : 0;
                     int rookToCol = to.Col > from.Col ? to.Col - 1 : to.Col + 1;
                     var rook = Board.Squares[from.Row][rookFromCol] as Rook;
+
+                    if (rook == null)
+                    {
+                        logger.LogWarning("Rook not found for castling.");
+                        return false;
+                    }
 
                     // Move the rook
                     Board.Squares[from.Row][rookFromCol] = null;
@@ -92,9 +107,10 @@ namespace ChessAI.Models
                 if (piece is Pawn pawn && Board.Squares[to.Row][to.Col] == null && to.Col != from.Col)
                 {
                     // En passant capture
-                    int capturedPawnRow = from.Row;
+                    int capturedPawnRow = piece.IsWhite ? to.Row + 1 : to.Row - 1;
                     capturedPiece = Board.Squares[capturedPawnRow][to.Col];
                     Board.Squares[capturedPawnRow][to.Col] = null;
+                    isEnPassantCapture = true;
                 }
 
                 // Move piece
@@ -136,12 +152,35 @@ namespace ChessAI.Models
                     movingKing.HasMoved = true;
                 }
 
-                string fen = Board.GenerateFEN(IsWhiteTurn);
-                BoardHistory.Add(fen);
+                // Determine if the move was a capture or a pawn move
+                bool isCapture = capturedPiece != null || isEnPassantCapture;
+                bool isPawnMove = piece is Pawn;
 
+                if (isCapture || isPawnMove)
+                {
+                    HalfMoveClock = 0;
+                }
+                else
+                {
+                    HalfMoveClock++;
+                }
+
+                // Check for the 50-Move Rule
+                if (HalfMoveClock >= 100)
+                {
+                    IsGameOver = true;
+                    GameResult = "Draw by fifty-move rule.";
+                    logger.LogInformation("Draw by fifty-move rule.");
+
+                    return true;
+                }
+
+                string fullFen = Board.GenerateFEN(IsWhiteTurn, HalfMoveClock, FullMoveNumber);
+                string repetitionFen = Board.GenerateRepetitionFEN(IsWhiteTurn);
+                BoardHistory.Add(repetitionFen);
 
                 // Check for three-fold repetition
-                if (BoardHistory.Count(f => f == fen) >= 3)
+                if (BoardHistory.Count(f => f == repetitionFen) >= 3)
                 {
                     IsGameOver = true;
                     GameResult = "Draw due to three-fold repetition.";
@@ -152,6 +191,8 @@ namespace ChessAI.Models
                 if (piece is Pawn && (to.Row == 0 || to.Row == 7))
                 {
                     PromotePawn(to, piece.IsWhite, logger);
+                    // Reset HalfMoveClock after promotion as it is a pawn move
+                    HalfMoveClock = 0;
                 }
 
                 // Check for checkmate or stalemate
@@ -187,6 +228,11 @@ namespace ChessAI.Models
                         GameResult = "Draw due to insufficient material.";
                         logger.LogInformation("Draw due to insufficient material.");
                     }
+                }
+
+                if (!IsWhiteTurn)
+                {
+                    FullMoveNumber++;
                 }
 
                 IsWhiteTurn = !IsWhiteTurn;
