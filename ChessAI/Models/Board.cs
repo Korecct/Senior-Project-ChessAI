@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace ChessAI.Models
 {
     [Serializable]
@@ -55,6 +57,67 @@ namespace ChessAI.Models
             // Initialize kings
             Squares[7][4] = new King { IsWhite = true, Position = (7, 4) };//E1
             Squares[0][4] = new King { IsWhite = false, Position = (0, 4) };//E8
+        }
+
+        public string GenerateFEN(bool isWhiteTurn)
+        {
+            StringBuilder fen = new StringBuilder();
+
+            // Piece positions
+            for (int row = 0; row < 8; row++)
+            {
+                int emptyCount = 0;
+                for (int col = 0; col < 8; col++)
+                {
+                    var piece = Squares[row][col];
+                    if (piece == null)
+                    {
+                        emptyCount++;
+                    }
+                    else
+                    {
+                        if (emptyCount > 0)
+                        {
+                            fen.Append(emptyCount);
+                            emptyCount = 0;
+                        }
+
+                        char pieceChar = piece switch
+                        {
+                            Pawn p => p.IsWhite ? 'P' : 'p',
+                            Rook r => r.IsWhite ? 'R' : 'r',
+                            Knight n => n.IsWhite ? 'N' : 'n',
+                            Bishop b => b.IsWhite ? 'B' : 'b',
+                            Queen q => q.IsWhite ? 'Q' : 'q',
+                            King k => k.IsWhite ? 'K' : 'k',
+                            _ => throw new Exception("Unknown piece type")
+                        };
+                        fen.Append(pieceChar);
+                    }
+                }
+
+                if (emptyCount > 0)
+                {
+                    fen.Append(emptyCount);
+                }
+
+                if (row < 7)
+                {
+                    fen.Append('/');
+                }
+            }
+
+            fen.Append(isWhiteTurn ? " w " : " b ");
+
+            fen.Append("KQkq ");
+
+            // En passant target square
+            fen.Append("- "); // Placeholder
+
+            // Halfmove clock and fullmove number
+            fen.Append("0 1"); // Placeholder
+
+            return fen.ToString();
         }
 
         public bool IsEmpty(int row, int col)

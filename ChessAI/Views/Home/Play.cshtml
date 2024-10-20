@@ -19,7 +19,7 @@
                 <div class="game-result-content">
                     <span id="gameResultMessage" class="game-result-message"></span>
                     <div class="modal-buttons">
-                        <button type="button" class="restart-button" onclick="restartGame()">Restart</button>
+                        <button type="button" class="restart-button" onclick="restartGame()">Rematch</button>
                         <button type="button" class="close-button" onclick="closeGameResultModal()">Close</button>
                     </div>
                 </div>
@@ -70,7 +70,7 @@
             <div class="turn-mode-indicator" id="turnIndicator">
                 @if (Model.Game.IsGameOver)
                 {
-                    <span>Game Over</span>
+                    <span>@Model.GameResult</span>
                 }
                 else
                 {
@@ -99,7 +99,11 @@
                         }
                     </select>
                     <button type="button" class="ai-button" onclick="selectAIAndStartGame()">Start Game</button>
-                    <button type="button" class="ai-button" onclick="setGameMode('PvAI')">Restart</button>
+                    <!--<button type="button" class="ai-button" onclick="setGameMode('PvAI')">Restart</button>-->
+
+                    <div class="resign-button-container">
+                        <button type="button" class="ai-button" onclick="resignGame()">Resign</button>
+                    </div>
                 </div>
             }
 
@@ -107,6 +111,9 @@
             @if (Model.GameMode == "LocalPvP")
             {
                 <div class="ai-selection-container">
+                    <div class="resign-button-container">
+                        <button type="button" class="ai-button" onclick="resignGame()">Resign</button>
+                    </div>
                     <button type="button" class="ai-button" onclick="setGameMode('LocalPvP')">Restart</button>
                 </div>
             }
@@ -129,7 +136,7 @@
             const gameResultModal = document.getElementById('gameResultModal');
             const gameResultMessage = document.getElementById('gameResultMessage');
 
-            const isGameOver = @Html.Raw(Json.Serialize(Model.Game.IsGameOver));
+            let isGameOver = @Html.Raw(Json.Serialize(Model.Game.IsGameOver));
             let isWhiteTurn = @Html.Raw(Json.Serialize(Model.Game.IsWhiteTurn));
 
             const sounds = {
@@ -323,9 +330,60 @@
                 });
             }
 
+            // Resign Button Handling
+            async function resignGame() {
+                if (isGameBusy || isGameOver) return;
+                const confirmation = confirm("Are you sure you want to resign?");
+                if (!confirmation) return;
+
+                isGameBusy = true;
+
+                try {
+                    const response = await fetch('/Home/ResignGame', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': requestVerificationToken
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to resign the game.');
+
+                    const data = await response.json();
+
+                    if (data.isGameOver) {
+                        handleGameOver(data.gameResult);
+                    }
+
+                    isGameBusy = false;
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('An error occurred while resigning the game.');
+                    isGameBusy = false;
+                }
+            }
+
+            window.resignGame = resignGame;
+
+            function handleGameOver(gameResult) {
+                if (gameResult.includes("wins")) {
+                    playSound(gameResult.includes("resignation") ? 'Victory' : 'Checkmate');
+                } else if (gameResult.includes("draw") || gameResult.includes("stalemate")) {
+                    playSound('Stalemate');
+                } else {
+                    playSound('Defeat');
+                }
+
+                showGameResultModal(gameResult);
+                updateTurnIndicator(null, null, null, true, gameResult);
+
+                isGameOver = true;
+
+            }
+
             function updateTurnIndicator(isWhiteTurnParam, isWhiteKingInCheck, isBlackKingInCheck, isGameOverParam, message) {
                 if (isGameOverParam) {
-                    turnIndicator.innerHTML = '<span>Game Over</span>';
+                    turnIndicator.innerHTML = `<span>${message}</span>`;
                     return;
                 }
 
@@ -376,12 +434,12 @@
                             updateTurnIndicator(null, null, null, false, "AI is thinking...");
                             setTimeout(() => {
                                 makeAIMove(data.aiMove.from, data.aiMove.to, data);
-                                updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
+                                updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver, data.isGameOver ? data.gameResult : null);
                                 isWhiteTurn = data.isWhiteTurn; // Update the turn
                                 isGameBusy = false;
                             }, 1000); // Delay before AI moves
                         } else {
-                            updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver);
+                            updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver, data.isGameOver ? data.gameResult : null);
                             isWhiteTurn = data.isWhiteTurn; // Update the turn
                             isGameBusy = false;
                         }
@@ -532,18 +590,6 @@
                 }
             }
 
-            function handleGameOver(gameResult) {
-                if (gameResult.includes("wins")) {
-                    playSound('Victory');
-                } else if (gameResult.includes("draw") || gameResult.includes("stalemate")) {
-                    playSound('Stalemate');
-                } else {
-                    playSound('Defeat');
-                }
-
-                showGameResultModal(gameResult);
-            }
-
             function showGameResultModal(message) {
                 gameResultMessage.textContent = message;
                 gameResultModal.style.display = 'flex';
@@ -575,7 +621,7 @@
                         alert('An error occurred while restarting the game.');
                         if (restartButton) {
                             restartButton.disabled = false;
-                            restartButton.textContent = 'Restart';
+                            restartButton.textContent = 'Rematch';
                         }
                     });
             }

@@ -76,20 +76,93 @@ namespace ChessAI.Controllers
                 SelectedAI = selectedAI,
                 IsWhiteTurn = game.IsWhiteTurn,
                 IsWhiteKingInCheck = game.Board.IsKingInCheck(true),
-                IsBlackKingInCheck = game.Board.IsKingInCheck(false)
+                IsBlackKingInCheck = game.Board.IsKingInCheck(false),
+                GameResult = game.GameResult
             };
 
             return View(viewModel);
         }
 
-        // Not ideal, needs to simply reset the board not redirect, fix later
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult RestartGame()
         {
-            HttpContext.Session.Clear();
-            return RedirectToAction("Play");
+            var gameMode = HttpContext.Session.GetString("GameMode") ?? "LocalPvP";
+            var selectedAI = HttpContext.Session.GetString("SelectedAI");
+            var newGame = new Game();
+            HttpContext.Session.SetObjectAsJson("Game", newGame);
+
+            var response = new RestartResponse
+            {
+                Success = true,
+                Game = newGame,
+                GameMode = gameMode,
+                SelectedAI = selectedAI,
+                IsWhiteTurn = newGame.IsWhiteTurn,
+                IsWhiteKingInCheck = newGame.Board.IsKingInCheck(true),
+                IsBlackKingInCheck = newGame.Board.IsKingInCheck(false),
+                IsGameOver = newGame.IsGameOver,
+                GameResult = newGame.GameResult
+            };
+
+            return Json(response);
+        }
+
+        public class RestartResponse
+        {
+            public bool Success { get; set; }
+            public Game Game { get; set; }
+            public string GameMode { get; set; }
+            public string SelectedAI { get; set; }
+            public bool IsWhiteTurn { get; set; }
+            public bool IsWhiteKingInCheck { get; set; }
+            public bool IsBlackKingInCheck { get; set; }
+            public bool IsGameOver { get; set; }
+            public string GameResult { get; set; }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ResignGame()
+        {
+            var game = HttpContext.Session.GetObjectFromJson<Game>("Game");
+            if (game == null)
+            {
+                _logger.LogWarning("Game not found in session.");
+                return BadRequest("Game not found.");
+            }
+
+            if (game.IsGameOver)
+            {
+                _logger.LogWarning("Resign attempted on an already over game.");
+                return BadRequest("Game is already over.");
+            }
+
+            // Determine which player is resigning based on the turn
+            bool resigningIsWhite = game.IsWhiteTurn;
+            game.IsGameOver = true;
+
+            if (resigningIsWhite)
+            {
+                game.GameResult = "Black wins by resignation";
+            }
+            else
+            {
+                game.GameResult = "White wins by resignation";
+            }
+
+            HttpContext.Session.SetObjectAsJson("Game", game);
+
+            var response = new GameResultResponse
+            {
+                IsGameOver = true,
+                GameResult = game.GameResult,
+                IsWhiteTurn = game.IsWhiteTurn,
+                IsWhiteKingInCheck = game.Board.IsKingInCheck(true),
+                IsBlackKingInCheck = game.Board.IsKingInCheck(false)
+            };
+
+            return Json(response);
         }
 
         [HttpPost]
@@ -410,6 +483,15 @@ namespace ChessAI.Controllers
             public required string GameMode { get; set; }
         }
 
+        public class GameResultResponse
+        {
+            public bool IsGameOver { get; set; }
+            public string GameResult { get; set; }
+            public bool IsWhiteTurn { get; set; }
+            public bool IsWhiteKingInCheck { get; set; }
+            public bool IsBlackKingInCheck { get; set; }
+        }
+
         public class PlayViewModel
         {
             public required Game Game { get; set; }
@@ -418,6 +500,7 @@ namespace ChessAI.Controllers
             public bool IsWhiteTurn { get; set; }
             public bool IsWhiteKingInCheck { get; set; }
             public bool IsBlackKingInCheck { get; set; }
+            public string? GameResult { get; set; }
         }
 
         public class MoveResponse

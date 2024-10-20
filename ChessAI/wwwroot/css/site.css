@@ -686,6 +686,11 @@ button[type="button"].ai-button {
     margin-bottom: 10px;
 }
 
+.ai-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
     button[type="button"].ai-button:hover {
         background-color: #7b6cc5;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
