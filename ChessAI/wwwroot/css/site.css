@@ -324,7 +324,7 @@ body.dm .chess-piece.black-piece {
     position: absolute;
     width: 20%;
     height: 20%;
-    background-color: var(--highlight-bg-light);
+    background-color: var(--highlight-color);
     border-radius: 50%;
     top: 40%;
     left: 40%;
@@ -676,6 +676,7 @@ body.dm .ai-selection-container {
 
 body.dm #aiSelect {
     background-color: rgba(102, 102, 102, 0.7);
+    border-color: #ff6262;
     color: #ddd;
 }
 
