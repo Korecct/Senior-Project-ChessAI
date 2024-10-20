@@ -232,6 +232,8 @@ body.dm .switch-label {
     position: relative;
     transition: border-color var(--transition-speed);
     touch-action: manipulation;
+    border-radius: 15px;
+    overflow: hidden; 
 }
 
 body.dm .chess-board {
@@ -265,10 +267,26 @@ body.dm .chess-square.white {
     background-color: #bdbdbd;
 }
 
+.chess-square[data-row="0"][data-col="0"] {
+    border-top-left-radius: 15px;
+}
+
+.chess-square[data-row="0"][data-col="7"] {
+    border-top-right-radius: 15px;
+}
+
+.chess-square[data-row="7"][data-col="0"] {
+    border-bottom-left-radius: 15px;
+}
+
+.chess-square[data-row="7"][data-col="7"] {
+    border-bottom-right-radius: 15px;
+}
+
 /* Chess Piece Styles */
 .chess-piece {
     will-change: transform, color;
-    font-size: calc((var(--board-size) / 8) * 0.7);
+    font-size: calc((var(--board-size) / 7) * 0.7);
     font-family: "DejaVu Sans", "Arial Unicode MS", "Segoe UI Symbol", sans-serif;
     user-select: none;
     position: absolute; /* Position absolute relative to parent chess-square */
