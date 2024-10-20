@@ -6,7 +6,8 @@ namespace ChessAI.Models
         public Board Board { get; set; } = new Board();
         public bool IsWhiteTurn { get; set; } = true;
         public bool IsGameOver { get; set; } = false;
-        public string GameResult { get; set; } = "";
+        public string GameResult { get; set; } = "Ongoing";
+        public List<string> BoardHistory { get; set; } = new List<string>();
 
         public bool MakeMove((int Row, int Col) from, (int Row, int Col) to, ILogger logger)
         {
@@ -133,6 +134,18 @@ namespace ChessAI.Models
                 if (piece is King movingKing)
                 {
                     movingKing.HasMoved = true;
+                }
+
+                string fen = Board.GenerateFEN(IsWhiteTurn);
+                BoardHistory.Add(fen);
+
+
+                // Check for three-fold repetition
+                if (BoardHistory.Count(f => f == fen) >= 3)
+                {
+                    IsGameOver = true;
+                    GameResult = "Draw due to three-fold repetition.";
+                    logger.LogInformation("Draw due to three-fold repetition.");
                 }
 
                 // Check for pawn promotion
