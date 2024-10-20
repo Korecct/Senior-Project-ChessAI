@@ -233,7 +233,6 @@ body.dm .switch-label {
     transition: border-color var(--transition-speed);
     touch-action: manipulation;
     border-radius: 15px;
-    overflow: hidden; 
 }
 
 body.dm .chess-board {
