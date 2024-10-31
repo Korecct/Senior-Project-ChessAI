@@ -127,19 +127,33 @@ namespace ChessAI.Models.AIs
             board.Squares[originalPosition.Row][originalPosition.Col] = null;
             board.Squares[move.Row][move.Col] = piece;
             piece.Position = move;
+
             // Check if the moved piece is now under threat
             bool isThreatened = IsPieceUnderThreat(board, piece);
+
+            // Check for checkmate condition
+            bool isCheckmate = board.IsKingInCheck(!piece.IsWhite) && !board.AreAnyMovesAvailable(!piece.IsWhite);
+
             // Undo the simulated move
             board.Squares[originalPosition.Row][originalPosition.Col] = piece;
             board.Squares[move.Row][move.Col] = targetPiece; // Restore target piece
             piece.Position = originalPosition;
+
             // If the piece is threatened, subtract its value
             if (isThreatened)
             {
                 value -= PieceValues[piece.GetType().Name];
             }
+
+            // Return a high value for checkmate
+            if (isCheckmate)
+            {
+                return int.MaxValue; // Return a high value for checkmate
+            }
+
             return value;
         }
+
         // Method to check if a piece is under threat
         private bool IsPieceUnderThreat(Board board, Piece piece)
         {
