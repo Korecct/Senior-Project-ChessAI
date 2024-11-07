@@ -12,7 +12,6 @@ namespace ChessAI.Models.AIs
     {
         private const int MaxDepth = 3;  // Depth of the search tree for Minimax
 
-        // Positional value arrays for each piece, adjusted for Black's perspective
         private static readonly int[,] PawnPositionValues =
         {
             { 0, 0, 0, 0, 0, 0, 0, 0 },
@@ -85,6 +84,7 @@ namespace ChessAI.Models.AIs
             { -30, -40, -50, -50, -50, -50, -40, -30 }
         };
 
+
         public string Name => "Minimax AI";
 
         public (PositionModel From, PositionModel To) GetNextMove(Game game)
@@ -98,22 +98,21 @@ namespace ChessAI.Models.AIs
             return bestMove;
         }
 
-        // Minimax algorithm with alpha-beta pruning
         private (PositionModel From, PositionModel To) GetBestMove(Game game, int depth, bool isWhiteTurn, int alpha, int beta)
         {
             var board = game.Board;
 
             // Get all pieces belonging to the current player
             var aiPieces = board.Squares.SelectMany(row => row)
-                                       .Where(piece => piece != null && piece.IsWhite == isWhiteTurn)
-                                       .ToList();
+                                        .Where(piece => piece != null && piece.IsWhite == isWhiteTurn)
+                                        .ToList();
 
             int bestScore = isWhiteTurn ? int.MinValue : int.MaxValue;
             (PositionModel From, PositionModel To) bestMove = (null, null);
 
             foreach (var piece in aiPieces)
             {
-                var validMoves = piece.GetValidMoves(board).ToList();
+                var validMoves = piece.GetValidMoves(board).Where(move => IsMoveValid(board, piece, move)).ToList();
 
                 foreach (var move in validMoves)
                 {
@@ -121,7 +120,13 @@ namespace ChessAI.Models.AIs
                     var (fromRow, fromCol) = piece.Position;
                     var (toRow, toCol) = move;
 
+                    // Skip out-of-bounds moves
+                    if (toRow < 0 || toRow >= 8 || toCol < 0 || toCol >= 8)
+                        continue;
+
                     var capturedPiece = board.Squares[toRow][toCol];
+
+                    // Simulate move
                     board.Squares[fromRow][fromCol] = null;
                     board.Squares[toRow][toCol] = piece;
                     piece.Position = move;
@@ -134,7 +139,6 @@ namespace ChessAI.Models.AIs
                     board.Squares[toRow][toCol] = capturedPiece;
                     piece.Position = (fromRow, fromCol);
 
-                    // If it's White's turn, maximize the score, otherwise minimize it
                     if (isWhiteTurn)
                     {
                         if (score > bestScore)
@@ -165,7 +169,6 @@ namespace ChessAI.Models.AIs
             return bestMove;
         }
 
-        // Minimax evaluation function
         private int Minimax(Game game, int depth, bool isWhiteTurn, int alpha, int beta)
         {
             var board = game.Board;
@@ -178,14 +181,14 @@ namespace ChessAI.Models.AIs
 
             // Recursively evaluate the position for all valid moves
             var aiPieces = board.Squares.SelectMany(row => row)
-                                       .Where(piece => piece != null && piece.IsWhite == isWhiteTurn)
-                                       .ToList();
+                                        .Where(piece => piece != null && piece.IsWhite == isWhiteTurn)
+                                        .ToList();
 
             int bestScore = isWhiteTurn ? int.MinValue : int.MaxValue;
 
             foreach (var piece in aiPieces)
             {
-                var validMoves = piece.GetValidMoves(board).ToList();
+                var validMoves = piece.GetValidMoves(board).Where(move => IsMoveValid(board, piece, move)).ToList();
 
                 foreach (var move in validMoves)
                 {
@@ -193,7 +196,13 @@ namespace ChessAI.Models.AIs
                     var (fromRow, fromCol) = piece.Position;
                     var (toRow, toCol) = move;
 
+                    // Skip out-of-bounds moves
+                    if (toRow < 0 || toRow >= 8 || toCol < 0 || toCol >= 8)
+                        continue;
+
                     var capturedPiece = board.Squares[toRow][toCol];
+
+                    // Simulate move
                     board.Squares[fromRow][fromCol] = null;
                     board.Squares[toRow][toCol] = piece;
                     piece.Position = move;
@@ -228,10 +237,9 @@ namespace ChessAI.Models.AIs
             return bestScore;
         }
 
-        // Basic evaluation function that evaluates the board based on piece values and positional values
+        // Evaluation function
         private int EvaluateBoard(Board board, bool isWhiteTurn, Game game)
         {
-            // If the game is over, return a very high value for a win or a very low value for a loss
             if (game.IsGameOver)
             {
                 if (game.GameResult.Contains("Checkmate"))
@@ -245,30 +253,26 @@ namespace ChessAI.Models.AIs
             }
 
             int evaluation = 0;
-
-            // Define piece values
             var pieceValues = new Dictionary<Type, int>
-            {
-                { typeof(Pawn), 100 },
-                { typeof(Knight), 320 },
-                { typeof(Bishop), 330 },
-                { typeof(Rook), 500 },
-                { typeof(Queen), 900 },
-                { typeof(King), 20000 }
-            };
+        {
+            { typeof(Pawn), 100 },
+            { typeof(Knight), 320 },
+            { typeof(Bishop), 330 },
+            { typeof(Rook), 500 },
+            { typeof(Queen), 900 },
+            { typeof(King), 20000 }
+        };
 
-            // Define positional values for each piece type
             var piecePositionValues = new Dictionary<Type, int[,]>
-            {
-                { typeof(Pawn), PawnPositionValues },
-                { typeof(Knight), KnightPositionValues },
-                { typeof(Bishop), BishopPositionValues },
-                { typeof(Rook), RookPositionValues },
-                { typeof(Queen), QueenPositionValues },
-                { typeof(King), KingPositionValues }
-            };
+        {
+            { typeof(Pawn), PawnPositionValues },
+            { typeof(Knight), KnightPositionValues },
+            { typeof(Bishop), BishopPositionValues },
+            { typeof(Rook), RookPositionValues },
+            { typeof(Queen), QueenPositionValues },
+            { typeof(King), KingPositionValues }
+        };
 
-            // Evaluate the board based on material balance and positional value
             foreach (var row in board.Squares)
             {
                 foreach (var piece in row)
@@ -278,23 +282,51 @@ namespace ChessAI.Models.AIs
                         int value = pieceValues[piece.GetType()];
                         int positionValue = piecePositionValues[piece.GetType()][piece.Position.Row, piece.Position.Col];
 
-                        // Add positional value to the material value for the piece
                         int totalValue = value + positionValue;
 
-                        // Adjust for AI's or opponent's pieces
                         if (piece.IsWhite == isWhiteTurn)
                         {
-                            evaluation += totalValue;  // Add score for AI's pieces
+                            evaluation += totalValue;
                         }
                         else
                         {
-                            evaluation -= totalValue;  // Subtract score for opponent's pieces
+                            evaluation -= totalValue;
                         }
                     }
                 }
             }
 
             return evaluation;
+        }
+
+        // Check if the move is valid
+        private bool IsMoveValid(Board board, Piece piece, (int Row, int Col) move)
+        {
+            int toRow = move.Row;
+            int toCol = move.Col;
+
+            // Check if the move is within bounds
+            if (toRow < 0 || toRow >= 8 || toCol < 0 || toCol >= 8)
+            {
+                return false;
+            }
+
+            // Simulate the move
+            var originalPosition = piece.Position;
+            var capturedPiece = board.Squares[toRow][toCol];
+            board.Squares[originalPosition.Row][originalPosition.Col] = null;
+            board.Squares[toRow][toCol] = piece;
+            piece.Position = move;
+
+            // Check if the king is in check after the move
+            bool isSafe = !board.IsKingInCheck(piece.IsWhite);
+
+            // Undo the move
+            board.Squares[originalPosition.Row][originalPosition.Col] = piece;
+            board.Squares[toRow][toCol] = capturedPiece;
+            piece.Position = originalPosition;
+
+            return isSafe;
         }
     }
 }
