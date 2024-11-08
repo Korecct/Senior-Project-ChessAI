@@ -59,6 +59,29 @@ namespace ChessAI.Models
             Squares[0][4] = new King { IsWhite = false, Position = (0, 4) };//E8
         }
 
+        // Clone method for deep copying the board
+        public Board Clone()
+        {
+            var newBoard = new Board();
+
+            for (int row = 0; row < 8; row++)
+            {
+                for (int col = 0; col < 8; col++)
+                {
+                    if (Squares[row][col] != null)
+                    {
+                        newBoard.Squares[row][col] = Squares[row][col].Clone();
+                    }
+                    else
+                    {
+                        newBoard.Squares[row][col] = null;
+                    }
+                }
+            }
+
+            return newBoard;
+        }
+
         public string GenerateFEN(bool isWhiteTurn, int halfMoveClock, int fullMoveNumber)
         {
             StringBuilder fen = new();
@@ -248,13 +271,18 @@ namespace ChessAI.Models
             return row >= 0 && row < 8 && col >= 0 && col < 8;
         }
 
-        public bool IsKingInCheck(bool isWhite)
+        public bool IsKingInCheck(bool isWhite, ILogger logger = null)
         {
             (int Row, int Col) = FindKingPosition(isWhite);
-            return IsSquareUnderAttack(Row, Col, !isWhite);
+            bool isUnderAttack = IsSquareUnderAttack(Row, Col, !isWhite, out Piece attackingPiece);
+            if (isUnderAttack && logger != null)
+            {
+                logger.LogInformation($"{(isWhite ? "White" : "Black")} King at ({Row}, {Col}) is in check by {(attackingPiece.IsWhite ? "White" : "Black")} {attackingPiece.GetType().Name} at ({attackingPiece.Position.Row}, {attackingPiece.Position.Col}).");
+            }
+            return isUnderAttack;
         }
 
-        public bool IsSquareUnderAttack(int row, int col, bool byWhite)
+        public bool IsSquareUnderAttack(int row, int col, bool byWhite, out Piece attackingPiece)
         {
             foreach (var pieceRow in Squares)
             {
@@ -262,14 +290,61 @@ namespace ChessAI.Models
                 {
                     if (piece != null && piece.IsWhite == byWhite)
                     {
-                        var validMoves = piece.GetValidMovesIgnoringCheck(this);
-                        if (validMoves.Any(move => move.Row == row && move.Col == col))
+                        if (piece is King opponentKing)
                         {
-                            return true;
+                            // Handle the opponent's king separately
+                            int[] offsets = { -1, 0, 1 };
+                            foreach (int rowOffset in offsets)
+                            {
+                                foreach (int colOffset in offsets)
+                                {
+                                    if (rowOffset != 0 || colOffset != 0)
+                                    {
+                                        int newRow = opponentKing.Position.Row + rowOffset;
+                                        int newCol = opponentKing.Position.Col + colOffset;
+                                        if (IsWithinBounds(newRow, newCol))
+                                        {
+                                            if (newRow == row && newCol == col)
+                                            {
+                                                attackingPiece = opponentKing;
+                                                return true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else if (piece is Pawn pawn)
+                        {
+                            // Handle pawn attacks separately
+                            int direction = pawn.IsWhite ? -1 : 1;
+                            int attackRow = pawn.Position.Row + direction;
+                            int[] attackCols = { pawn.Position.Col - 1, pawn.Position.Col + 1 };
+                            foreach (int attackCol in attackCols)
+                            {
+                                if (IsWithinBounds(attackRow, attackCol))
+                                {
+                                    if (attackRow == row && attackCol == col)
+                                    {
+                                        attackingPiece = pawn;
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var validMoves = piece.GetValidMovesIgnoringCheck(this);
+                            if (validMoves.Any(move => move.Row == row && move.Col == col))
+                            {
+                                attackingPiece = piece;
+                                return true;
+                            }
                         }
                     }
                 }
             }
+            attackingPiece = null;
             return false;
         }
 
@@ -397,21 +472,33 @@ namespace ChessAI.Models
                         var validMoves = piece.GetValidMoves(this);
                         foreach (var move in validMoves)
                         {
-                            // Simulate the move
-                            var originalPosition = piece.Position;
-                            var capturedPiece = Squares[move.Row][move.Col];
+                            // Clone the board to simulate the move
+                            var boardClone = this.Clone();
+                            var pieceClone = boardClone.Squares[piece.Position.Row][piece.Position.Col];
+                            var capturedPiece = boardClone.Squares[move.Row][move.Col];
 
-                            Squares[originalPosition.Row][originalPosition.Col] = null;
-                            Squares[move.Row][move.Col] = piece;
-                            piece.Position = move;
+                            // Simulate the move on the cloned board
+                            boardClone.Squares[pieceClone.Position.Row][pieceClone.Position.Col] = null;
+                            boardClone.Squares[move.Row][move.Col] = pieceClone;
+                            pieceClone.Position = move;
+
+                            // Handle En Passant capture in simulation
+                            if (pieceClone is Pawn pawnClone)
+                            {
+                                // En Passant capture
+                                if (capturedPiece == null && Math.Abs(move.Col - piece.Position.Col) == 1)
+                                {
+                                    int capturedPawnRow = isWhite ? move.Row + 1 : move.Row - 1;
+                                    var enPassantPawn = boardClone.Squares[capturedPawnRow][move.Col];
+                                    if (enPassantPawn is Pawn enPassantPawnClone && enPassantPawnClone.EnPassantEligible)
+                                    {
+                                        boardClone.Squares[capturedPawnRow][move.Col] = null;
+                                    }
+                                }
+                            }
 
                             // Check if own king is in check
-                            bool isInCheck = IsKingInCheck(isWhite);
-
-                            // Undo the move
-                            Squares[originalPosition.Row][originalPosition.Col] = piece;
-                            Squares[move.Row][move.Col] = capturedPiece;
-                            piece.Position = originalPosition;
+                            bool isInCheck = boardClone.IsKingInCheck(isWhite);
 
                             if (!isInCheck)
                             {

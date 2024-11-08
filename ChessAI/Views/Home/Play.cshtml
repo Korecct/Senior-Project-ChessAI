@@ -314,8 +314,8 @@
 
             function highlightValidMoves(moves) {
                 moves.forEach(move => {
-                    const row = move.Row ?? move.row;
-                    const col = move.Col ?? move.col;
+                    const row = move.row;
+                    const col = move.col;
                     const square = document.querySelector(`.chess-square[data-row='${row}'][data-col='${col}']`);
                     if (square) {
                         square.classList.add('highlight');
@@ -424,23 +424,27 @@
                         movePieceInUI(fromRow, fromCol, toRow, toCol, data);
                         playPlayerMoveSound(data);
 
-                        if (data.isGameOver) {
-                            handleGameOver(data.gameResult);
-                            isGameBusy = false;
-                            return;
-                        }
-
                         if (data.aiMove) {
                             updateTurnIndicator(null, null, null, false, "AI is thinking...");
                             setTimeout(() => {
                                 makeAIMove(data.aiMove.from, data.aiMove.to, data);
                                 updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver, data.isGameOver ? data.gameResult : null);
                                 isWhiteTurn = data.isWhiteTurn; // Update the turn
+
+                                if (data.isGameOver) {
+                                    handleGameOver(data.gameResult);
+                                }
+
                                 isGameBusy = false;
                             }, 1000); // Delay before AI moves
                         } else {
                             updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver, data.isGameOver ? data.gameResult : null);
                             isWhiteTurn = data.isWhiteTurn; // Update the turn
+
+                            if (data.isGameOver) {
+                                handleGameOver(data.gameResult);
+                            }
+
                             isGameBusy = false;
                         }
                     } else {
@@ -553,8 +557,13 @@
             }
 
             function makeAIMove(from, to, data) {
-                const fromSquare = document.querySelector(`.chess-square[data-row='${from.row}'][data-col='${from.col}']`);
-                const toSquare = document.querySelector(`.chess-square[data-row='${to.row}'][data-col='${to.col}']`);
+                const fromRow = from.row ?? from.Row;
+                const fromCol = from.col ?? from.Col;
+                const toRow = to.row ?? to.Row;
+                const toCol = to.col ?? to.Col;
+
+                const fromSquare = document.querySelector(`.chess-square[data-row='${fromRow}'][data-col='${fromCol}']`);
+                const toSquare = document.querySelector(`.chess-square[data-row='${toRow}'][data-col='${toCol}']`);
 
                 if (fromSquare && toSquare) {
                     const piece = fromSquare.querySelector('.chess-piece');
@@ -563,8 +572,8 @@
                         if (capturedPiece) capturedPiece.remove();
 
                         toSquare.appendChild(piece);
-                        piece.dataset.row = to.row;
-                        piece.dataset.col = to.col;
+                        piece.dataset.row = toRow;
+                        piece.dataset.col = toCol;
                         resetPiecePosition(piece);
 
                         // Handle special moves
@@ -572,20 +581,21 @@
                             promotePawn(piece);
                         }
                         if (data.aiIsEnPassantCapture) {
-                            captureEnPassant(piece, to.row, to.col);
+                            captureEnPassant(piece, toRow, toCol);
                         }
                         if (data.aiIsCastle) {
-                            castleRook(piece, from.row, from.col, to.col);
+                            castleRook(piece, fromRow, fromCol, toCol);
                         }
 
                         playAIMoveSound(data);
 
+                        // Update the turn
+                        isWhiteTurn = data.isWhiteTurn;
+
+                        // Handle game over if the game ends after AI's move
                         if (data.isGameOver) {
                             handleGameOver(data.gameResult);
                         }
-
-                        // Update the turn
-                        isWhiteTurn = data.isWhiteTurn;
                     }
                 }
             }

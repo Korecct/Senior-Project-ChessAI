@@ -227,7 +227,7 @@ namespace ChessAI.Controllers
 
             // Checks if the opponent is now in check
             bool opponentIsWhite = !currentPlayerIsWhite;
-            bool opponentIsInCheck = game.Board.IsKingInCheck(opponentIsWhite);
+            bool opponentIsInCheck = game.Board.IsKingInCheck(opponentIsWhite, _logger);
 
             HttpContext.Session.SetObjectAsJson("Game", game);
 
@@ -314,7 +314,7 @@ namespace ChessAI.Controllers
 
                         // Determine AI move effects
                         bool aiOpponentIsWhite = currentPlayerIsWhite;
-                        bool aiOpponentIsInCheck = game.Board.IsKingInCheck(aiOpponentIsWhite);
+                        bool aiOpponentIsInCheck = game.Board.IsKingInCheck(aiOpponentIsWhite, _logger);
                         bool aiIsCheckmate = game.IsGameOver && game.GameResult.Contains("wins");
 
                         response.AIMove = new AIMoveResponse
@@ -371,20 +371,32 @@ namespace ChessAI.Controllers
             foreach (var (Row, Col) in validMoves)
             {
                 // Simulate the move
-                var originalPosition = piece.Position;
-                var capturedPiece = game.Board.Squares[Row][Col];
+                var boardClone = game.Board.Clone();
+                var pieceClone = boardClone.Squares[piece.Position.Row][piece.Position.Col];
+                var capturedPiece = boardClone.Squares[Row][Col];
 
-                game.Board.Squares[originalPosition.Row][originalPosition.Col] = null;
-                game.Board.Squares[Row][Col] = piece;
-                piece.Position = (Row, Col);
+                // Simulate the move on the cloned board
+                boardClone.Squares[pieceClone.Position.Row][pieceClone.Position.Col] = null;
+                boardClone.Squares[Row][Col] = pieceClone;
+                pieceClone.Position = (Row, Col);
+
+                // Handle En Passant capture in simulation
+                if (pieceClone is Pawn pawnClone)
+                {
+                    // En Passant capture
+                    if (capturedPiece == null && Math.Abs(Col - piece.Position.Col) == 1)
+                    {
+                        int capturedPawnRow = piece.IsWhite ? Row + 1 : Row - 1;
+                        var enPassantPawn = boardClone.Squares[capturedPawnRow][Col];
+                        if (enPassantPawn is Pawn enPassantPawnClone && enPassantPawnClone.EnPassantEligible)
+                        {
+                            boardClone.Squares[capturedPawnRow][Col] = null;
+                        }
+                    }
+                }
 
                 // Check if own king is in check
-                bool isInCheck = game.Board.IsKingInCheck(piece.IsWhite);
-
-                // Undo the move
-                game.Board.Squares[originalPosition.Row][originalPosition.Col] = piece;
-                game.Board.Squares[Row][Col] = capturedPiece;
-                piece.Position = originalPosition;
+                bool isInCheck = boardClone.IsKingInCheck(piece.IsWhite);
 
                 if (!isInCheck)
                 {
