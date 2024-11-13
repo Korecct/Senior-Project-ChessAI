@@ -1,18 +1,204 @@
 ﻿@{
     ViewData["Title"] = "Rules";
 }
-<h1>@ViewData["Title"]</h1>
+<h1 class="text-center mb-4">@ViewData["Title"]</h1>
 
-<p>The objective of chess is to checkmate the opponent’s king, putting it in a position where it’s in danger of capture and there’s no legal move to escape.</p>
-<p>The board is an 8x8 grid. Each player starts with 16 pieces: 1 king, 1 queen, 2 rooks, 2 knights, 2 bishops, and 8 pawns.</p>
-<p>Each piece has specific movement rules:<p>
-</p>The king moves 1 square in any direction.</p>
-<p>The queen moves any number of squares in any direction.</p>
-<p>The rook moves any number of squares horizontally or vertically.</p>
-<p>The bishop moves any number of squares diagonally.</p> 
-<p>The knight moves in an L-shape (2 squares in one direction and then 1 square perpendicular).</p>
-<p>The pawn moves 1 square forward (2 squares on its first move) and captures diagonally.</p>
-<p>Special moves include castling, where the king moves 2 squares towards a rook and the rook moves to the square next to the king, under certain conditions. En Passant is a pawn capturing move that occurs when a pawn moves 2 squares forward from its starting position and lands beside an opponent’s pawn. Pawn promotion happens when a pawn reaches the far end of the board and can be promoted to any piece except a king.</p>
-<p>Check means the king is under direct threat of capture, and the player must make a move to remove the threat. Checkmate occurs when the king is in check and cannot escape, ending the game.</p>
-<p>Draws can happen for several reasons, including insufficient material to checkmate, threefold repetition, or a stalemate, where a player has no legal moves but is not in check.</p>
-<p>Players alternate turns, moving one piece per turn.</p>
+<div class="rules-container">
+
+    <!-- Objective Section -->
+    <div class="rule-section">
+        <div class="rule-content">
+            <div class="rule-text">
+                <h2>Objective</h2>
+                <p>The objective of chess is to checkmate the opponent’s king, putting it in a position where it’s in danger of capture and there’s no legal move to escape.</p>
+            </div>
+            <div class="rule-gif">
+                <img src="~/images/Rules/Objective.gif" alt="Checkmate Objective" loading="lazy" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Board and Pieces Section -->
+    <div class="rule-section">
+        <div class="rule-content">
+            <div class="rule-text">
+                <h2>The Board and Pieces</h2>
+                <p>The chessboard is an 8x8 grid. Each player starts with 16 pieces: 1 king, 1 queen, 2 rooks, 2 knights, 2 bishops, and 8 pawns.</p>
+            </div>
+            <div class="rule-gif">
+                <img src="~/images/Rules/Board_with_pieces.png" alt="Chess Board and Pieces" loading="lazy" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Pieces Movement Rules -->
+    <div class="rule-section">
+        <h2>Piece Movements</h2>
+        <div class="pieces-container">
+            <!-- King -->
+            <div class="piece-item">
+                <div class="rule-text">
+                    <h3>King</h3>
+                    <p>The king moves 1 square in any direction.</p>
+                </div>
+                <div class="rule-gif">
+                    <img src="~/images/Rules/King.png" alt="King Movement" loading="lazy" />
+                </div>
+            </div>
+
+            <!-- Queen -->
+            <div class="piece-item">
+                <div class="rule-text">
+                    <h3>Queen</h3>
+                    <p>The queen moves any number of squares in any direction.</p>
+                </div>
+                <div class="rule-gif">
+                    <img src="~/images/Rules/Queen.png" alt="Queen Movement" loading="lazy" />
+                </div>
+            </div>
+
+            <!-- Rook -->
+            <div class="piece-item">
+                <div class="rule-text">
+                    <h3>Rook</h3>
+                    <p>The rook moves any number of squares horizontally or vertically.</p>
+                </div>
+                <div class="rule-gif">
+                    <img src="~/images/Rules/Rook.png" alt="Rook Movement" loading="lazy" />
+                </div>
+            </div>
+
+            <!-- Bishop -->
+            <div class="piece-item">
+                <div class="rule-text">
+                    <h3>Bishop</h3>
+                    <p>The bishop moves any number of squares diagonally.</p>
+                </div>
+                <div class="rule-gif">
+                    <img src="~/images/Rules/Bishop.png" alt="Bishop Movement" loading="lazy" />
+                </div>
+            </div>
+
+            <!-- Knight -->
+            <div class="piece-item">
+                <div class="rule-text">
+                    <h3>Knight</h3>
+                    <p>The knight moves in an L-shape: 2 squares in one direction and then 1 square perpendicular.</p>
+                </div>
+                <div class="rule-gif">
+                    <img src="~/images/Rules/Knight.png" alt="Knight Movement" loading="lazy" />
+                </div>
+            </div>
+
+            <!-- Pawn -->
+            <div class="piece-item">
+                <div class="rule-text">
+                    <h3>Pawn</h3>
+                    <p>The pawn moves 1 square forward (2 squares on its first move) and captures diagonally.</p>
+                </div>
+                <div class="rule-gif">
+                    <img src="~/images/Rules/Pawn.png" alt="Pawn Movement" loading="lazy" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Special Moves Section -->
+    <div class="rule-section">
+        <h2>Special Moves</h2>
+        <div class="special-moves-container">
+            <!-- Castling -->
+            <div class="special-move-item">
+                <div class="rule-text">
+                    <h3>Castling</h3>
+                    <p>Castling is a move where the king moves 2 squares towards a rook, and the rook moves to the square next to the king. This can only be done if neither piece has moved before, there are no pieces between them, and the king is not in check.</p>
+                </div>
+                <div class="rule-gif">
+                    <img src="~/images/Rules/Castling.gif" alt="Castling Move" loading="lazy" />
+                </div>
+            </div>
+
+            <!-- En Passant -->
+            <div class="special-move-item">
+                <div class="rule-text">
+                    <h3>En Passant</h3>
+                    <p>En Passant is a special pawn capture that occurs when a pawn moves 2 squares forward from its starting position and lands beside an opponent’s pawn. The opponent’s pawn can capture it as if it had only moved 1 square.</p>
+                </div>
+                <div class="rule-gif">
+                    <img src="~/images/Rules/En_Passant.gif" alt="En Passant Move" loading="lazy" />
+                </div>
+            </div>
+
+            <!-- Pawn Promotion -->
+            <div class="special-move-item">
+                <div class="rule-text">
+                    <h3>Pawn Promotion</h3>
+                    <p>When a pawn reaches the far end of the board, it can be promoted to any other piece except a king, typically a queen.</p>
+                </div>
+                <div class="rule-gif">
+                    <img src="~/images/Rules/Promotion.gif" alt="Pawn Promotion" loading="lazy" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Flow Section -->
+    <div class="rule-section">
+        <div class="rule-content">
+            <div class="rule-text">
+                <h2>Game Flow</h2>
+                <p>Players alternate turns, moving one piece per turn.</p>
+            </div>
+            <div class="rule-gif">
+                <img src="~/images/Rules/GameFlow.gif" alt="Game Flow" loading="lazy" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Check and Checkmate Section -->
+    <div class="rule-section">
+        <div class="rule-content">
+            <div class="rule-text">
+                <h2>Check and Checkmate</h2>
+                <p>Check means the king is under direct threat of capture, and the player must make a move to remove the threat. Checkmate occurs when the king is in check and cannot escape, ending the game.</p>
+            </div>
+            <div class="rule-gif">
+                <img src="~/images/Rules/Checkmate.gif" alt="Checkmate" loading="lazy" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Draws Section -->
+    <div class="rule-section">
+        <div class="rule-content">
+            <div class="rule-text">
+                <h2>Draws</h2>
+                <p>A draw in chess can occur under several conditions. Understanding these rules is essential for recognizing when a game cannot be won by either player. The primary draw conditions include:</p>
+                <ul>
+                    <li><strong>Threefold Repetition:</strong> This occurs when the same position is repeated three times with the same player to move and all possible moves remaining the same each time. A player can claim a draw if this repetition happens, ensuring that the game does not continue indefinitely without progress.</li>
+
+                    <li>
+                        <strong>Insufficient Material:</strong> If neither player has enough pieces to force a checkmate, the game is declared a draw. Common scenarios include:
+                        <ul>
+                            <li>King vs. King</li>
+                            <li>King and Bishop vs. King</li>
+                            <li>King and Knight vs. King</li>
+                            <li>King and Bishop vs. King and Bishop (with both bishops on the same color squares)</li>
+                        </ul>
+                    </li>
+
+                    <li><strong>Stalemate:</strong> This happens when a player has no legal moves available and is not in check. In such cases, the game ends immediately in a draw.</li>
+
+                    <li><strong>Fifty-Move Rule:</strong> If fifty consecutive moves have been made by both players without any pawn movement or any capture, either player can claim a draw. This rule prevents games from dragging on without progress.</li>
+
+                    <li><strong>Mutual Agreement:</strong> Both players can agree to a draw at any point during the game. This often occurs when both players recognize that neither can force a win.</li>
+                </ul>
+            </div>
+            <div class="rule-gif">
+                <img src="~/images/Rules/Threefold.gif" alt="Draw Conditions" loading="lazy" />
+            </div>
+        </div>
+    </div>
+
+
+</div>

@@ -18,16 +18,18 @@ namespace ChessAI.Models
 
         public bool MakeMove((int Row, int Col) from, (int Row, int Col) to, ILogger logger)
         {
+            logger?.LogInformation($"Attempting to move piece from ({from.Row}, {from.Col}) to ({to.Row}, {to.Col}).");
+
             var piece = Board.Squares[from.Row][from.Col];
             if (piece == null)
             {
-                logger.LogInformation($"No piece at position ({from.Row}, {from.Col}).");
+                logger?.LogInformation($"No piece at position ({from.Row}, {from.Col}).");
                 return false;
             }
 
             if (piece.IsWhite != IsWhiteTurn)
             {
-                logger.LogInformation($"It's not {(piece.IsWhite ? "white" : "black")}'s turn.");
+                logger?.LogInformation($"It's not {(piece.IsWhite ? "white" : "black")}'s turn.");
                 return false;
             }
 

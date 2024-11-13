@@ -2,8 +2,63 @@
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">SP-14-Green-ChessAI</h1>
-    <p>Senior Project Chess AI </p>
-    <p>Allen Smith, Ashton Miller, Matthew Corvacchioli, Joshua Peeples, Dylan Luong</p>
+<div class="main-container">
+    <div class="homepage-content">
+
+        <div class="homepage-title">
+            <h1>ChessAI</h1>
+            <h4>A chess game with AI opponents and Online PVP</h4>
+        </div>
+
+        <div class="homepage-gif-container">
+            <img src="~/images/Rules/GameFlow.gif" alt="Chess Game Flow" class="homepage-gif" loading="lazy" />
+        </div>
+
+        <!-- Play Button -->
+        <div class="play-button-container">
+            <a href="@Url.Action("Play", "Home")" class="gamemode-button play-button">Play</a>
+        </div>
+
+        <!-- Authors Section -->
+        <div class="homepage-box authors-box">
+            <h3>Authors</h3>
+            <div class="authors-list">
+                <div class="author-card">
+                    <img src="~/images/temp.png" alt="♟" class="author-photo" />
+                    <div class="author-info">
+                        <h4>Joshua Peeples</h4>
+                        <p>Lead Developer</p>
+                    </div>
+                </div>
+                <div class="author-card">
+                    <img src="~/images/temp.png" alt="♟" class="author-photo" />
+                    <div class="author-info">
+                        <h4>Matthew Corvacchioli</h4>
+                        <p>Website Management</p>
+                    </div>
+                </div>
+                <div class="author-card">
+                    <img src="~/images/temp.png" alt="♟" class="author-photo" />
+                    <div class="author-info">
+                        <h4>Ashton Miller</h4>
+                        <p>Documentation & Design</p>
+                    </div>
+                </div>
+                <div class="author-card">
+                    <img src="~/images/temp.png" alt="♟" class="author-photo" />
+                    <div class="author-info">
+                        <h4>Dylan Luong</h4>
+                        <p>Documentation</p>
+                    </div>
+                </div>
+                <div class="author-card">
+                    <img src="~/images/temp.png" alt="♟" class="author-photo" />
+                    <div class="author-info">
+                        <h4>Allen Smith</h4>
+                        <p>Team Leader</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

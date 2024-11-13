@@ -430,7 +430,7 @@ namespace ChessAI.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult SetGameMode([FromBody] GameModeRequest request)
         {
-            var validModes = new[] { "Tutorial", "LocalPvP", "PvAI" };
+            var validModes = new[] { "Tutorial", "LocalPvP", "PvAI", "OnlinePvP" };
             if (validModes.Contains(request.GameMode))
             {
                 HttpContext.Session.SetString("GameMode", request.GameMode);
@@ -441,6 +441,10 @@ namespace ChessAI.Controllers
 
                 // If switching to PvP then remove the selected AI
                 if (request.GameMode == "LocalPvP")
+                {
+                    HttpContext.Session.Remove("SelectedAI");
+                }
+                if (request.GameMode == "OnlinePvP")
                 {
                     HttpContext.Session.Remove("SelectedAI");
                 }

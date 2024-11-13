@@ -1,7 +1,12 @@
+using ChessAI.Hubs;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// SignalR
+builder.Services.AddSignalR();
 
 // Configure logging
 builder.Logging.ClearProviders();
@@ -17,11 +22,6 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
-
-// Configure logging
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
-builder.Logging.AddDebug();
 
 var app = builder.Build();
 
@@ -46,5 +46,8 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Map the ChessHub
+app.MapHub<ChessHub>("/chessHub");
 
 app.Run();
