@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using ChessAI.Models;
-using ChessAI.Controllers;
-using Microsoft.Extensions.Logging;
-using static ChessAI.Controllers.HomeController;
+﻿using static ChessAI.Controllers.HomeController;
 
 namespace ChessAI.Models.AIs
 {
@@ -89,19 +83,17 @@ namespace ChessAI.Models.AIs
 
         public (PositionModel From, PositionModel To) GetNextMove(Game game)
         {
-            var board = game.Board;
+            var board = game.Board.Clone(); // Clone the board
             var isWhiteTurn = game.IsWhiteTurn;
 
             // Call Minimax algorithm to get the best move
-            var bestMove = GetBestMove(game, MaxDepth, isWhiteTurn, int.MinValue, int.MaxValue);
+            var bestMove = GetBestMove(game, board, MaxDepth, isWhiteTurn, int.MinValue, int.MaxValue);
 
             return bestMove;
         }
 
-        private (PositionModel From, PositionModel To) GetBestMove(Game game, int depth, bool isWhiteTurn, int alpha, int beta)
+        private (PositionModel From, PositionModel To) GetBestMove(Game game, Board board, int depth, bool isWhiteTurn, int alpha, int beta)
         {
-            var board = game.Board;
-
             // Get all pieces belonging to the current player
             var aiPieces = board.Squares.SelectMany(row => row)
                                         .Where(piece => piece != null && piece.IsWhite == isWhiteTurn)
@@ -116,35 +108,67 @@ namespace ChessAI.Models.AIs
 
                 foreach (var move in validMoves)
                 {
-                    // Simulate the move
-                    var (fromRow, fromCol) = piece.Position;
-                    var (toRow, toCol) = move;
+                    // Clone the board for simulation
+                    var boardClone = board.Clone();
 
-                    // Skip out-of-bounds moves
-                    if (toRow < 0 || toRow >= 8 || toCol < 0 || toCol >= 8)
-                        continue;
+                    var pieceClone = boardClone.Squares[piece.Position.Row][piece.Position.Col];
+                    var targetPiece = boardClone.Squares[move.Row][move.Col];
 
-                    var capturedPiece = board.Squares[toRow][toCol];
+                    // Simulate the move on the cloned board
+                    boardClone.Squares[pieceClone.Position.Row][pieceClone.Position.Col] = null;
+                    boardClone.Squares[move.Row][move.Col] = pieceClone.Clone(); // Clone the piece being moved
+                    boardClone.Squares[move.Row][move.Col].Position = move;
 
-                    // Simulate move
-                    board.Squares[fromRow][fromCol] = null;
-                    board.Squares[toRow][toCol] = piece;
-                    piece.Position = move;
+                    // Handle special moves
+                    if (pieceClone is King movingKing && Math.Abs(move.Col - pieceClone.Position.Col) == 2)
+                    {
+                        // Castling
+                        int rookFromCol = move.Col > pieceClone.Position.Col ? 7 : 0;
+                        int rookToCol = move.Col > pieceClone.Position.Col ? move.Col - 1 : move.Col + 1;
+                        var rook = boardClone.Squares[movingKing.Position.Row][rookFromCol] as Rook;
+                        if (rook != null)
+                        {
+                            boardClone.Squares[movingKing.Position.Row][rookFromCol] = null;
+                            var rookClone = rook.Clone();
+                            rookClone.Position = (movingKing.Position.Row, rookToCol);
+                            boardClone.Squares[movingKing.Position.Row][rookToCol] = rookClone;
+                        }
+                    }
+
+                    if (pieceClone is Pawn movingPawn)
+                    {
+                        // En Passant Capture
+                        if (boardClone.IsEmpty(move.Row, move.Col) && Math.Abs(move.Col - pieceClone.Position.Col) == 1)
+                        {
+                            int capturedPawnRow = isWhiteTurn ? move.Row + 1 : move.Row - 1;
+                            var capturedPawn = boardClone.Squares[capturedPawnRow][move.Col] as Pawn;
+                            if (capturedPawn != null && capturedPawn.EnPassantEligible)
+                            {
+                                boardClone.Squares[capturedPawnRow][move.Col] = null;
+                            }
+                        }
+
+                        // Promotion (assuming promotion to Queen for simplicity)
+                        if ((isWhiteTurn && move.Row == 0) || (!isWhiteTurn && move.Row == 7))
+                        {
+                            boardClone.Squares[move.Row][move.Col] = new Queen
+                            {
+                                IsWhite = isWhiteTurn,
+                                Position = move
+                            };
+                        }
+                    }
 
                     // Recursively evaluate the position
-                    int score = Minimax(game, depth - 1, !isWhiteTurn, alpha, beta);
+                    int score = Minimax(game, boardClone, depth - 1, !isWhiteTurn, alpha, beta);
 
-                    // Undo the move
-                    board.Squares[fromRow][fromCol] = piece;
-                    board.Squares[toRow][toCol] = capturedPiece;
-                    piece.Position = (fromRow, fromCol);
-
+                    // Update bestScore and bestMove based on the evaluation
                     if (isWhiteTurn)
                     {
                         if (score > bestScore)
                         {
                             bestScore = score;
-                            bestMove = (new PositionModel { Row = fromRow, Col = fromCol }, new PositionModel { Row = toRow, Col = toCol });
+                            bestMove = (new PositionModel { Row = piece.Position.Row, Col = piece.Position.Col }, new PositionModel { Row = move.Row, Col = move.Col });
                         }
                         alpha = Math.Max(alpha, score);
                     }
@@ -153,7 +177,7 @@ namespace ChessAI.Models.AIs
                         if (score < bestScore)
                         {
                             bestScore = score;
-                            bestMove = (new PositionModel { Row = fromRow, Col = fromCol }, new PositionModel { Row = toRow, Col = toCol });
+                            bestMove = (new PositionModel { Row = piece.Position.Row, Col = piece.Position.Col }, new PositionModel { Row = move.Row, Col = move.Col });
                         }
                         beta = Math.Min(beta, score);
                     }
@@ -169,17 +193,15 @@ namespace ChessAI.Models.AIs
             return bestMove;
         }
 
-        private int Minimax(Game game, int depth, bool isWhiteTurn, int alpha, int beta)
+        private int Minimax(Game game, Board board, int depth, bool isWhiteTurn, int alpha, int beta)
         {
-            var board = game.Board;
-
             // Base case: if we have reached the maximum depth or the game is over
             if (depth == 0 || game.IsGameOver)
             {
                 return EvaluateBoard(board, isWhiteTurn, game);
             }
 
-            // Recursively evaluate the position for all valid moves
+            // Get all pieces belonging to the current player
             var aiPieces = board.Squares.SelectMany(row => row)
                                         .Where(piece => piece != null && piece.IsWhite == isWhiteTurn)
                                         .ToList();
@@ -192,29 +214,61 @@ namespace ChessAI.Models.AIs
 
                 foreach (var move in validMoves)
                 {
-                    // Simulate the move
-                    var (fromRow, fromCol) = piece.Position;
-                    var (toRow, toCol) = move;
+                    // Clone the board for simulation
+                    var boardClone = board.Clone();
 
-                    // Skip out-of-bounds moves
-                    if (toRow < 0 || toRow >= 8 || toCol < 0 || toCol >= 8)
-                        continue;
+                    var pieceClone = boardClone.Squares[piece.Position.Row][piece.Position.Col];
+                    var targetPiece = boardClone.Squares[move.Row][move.Col];
 
-                    var capturedPiece = board.Squares[toRow][toCol];
+                    // Simulate the move on the cloned board
+                    boardClone.Squares[pieceClone.Position.Row][pieceClone.Position.Col] = null;
+                    boardClone.Squares[move.Row][move.Col] = pieceClone.Clone(); // Clone the piece being moved
+                    boardClone.Squares[move.Row][move.Col].Position = move;
 
-                    // Simulate move
-                    board.Squares[fromRow][fromCol] = null;
-                    board.Squares[toRow][toCol] = piece;
-                    piece.Position = move;
+                    // Handle special moves
+                    if (pieceClone is King movingKing && Math.Abs(move.Col - pieceClone.Position.Col) == 2)
+                    {
+                        // Castling
+                        int rookFromCol = move.Col > pieceClone.Position.Col ? 7 : 0;
+                        int rookToCol = move.Col > pieceClone.Position.Col ? move.Col - 1 : move.Col + 1;
+                        var rook = boardClone.Squares[movingKing.Position.Row][rookFromCol] as Rook;
+                        if (rook != null)
+                        {
+                            boardClone.Squares[movingKing.Position.Row][rookFromCol] = null;
+                            var rookClone = rook.Clone();
+                            rookClone.Position = (movingKing.Position.Row, rookToCol);
+                            boardClone.Squares[movingKing.Position.Row][rookToCol] = rookClone;
+                        }
+                    }
 
-                    // Recursively evaluate
-                    int score = Minimax(game, depth - 1, !isWhiteTurn, alpha, beta);
+                    if (pieceClone is Pawn movingPawn)
+                    {
+                        // En Passant Capture
+                        if (boardClone.IsEmpty(move.Row, move.Col) && Math.Abs(move.Col - pieceClone.Position.Col) == 1)
+                        {
+                            int capturedPawnRow = isWhiteTurn ? move.Row + 1 : move.Row - 1;
+                            var capturedPawn = boardClone.Squares[capturedPawnRow][move.Col] as Pawn;
+                            if (capturedPawn != null && capturedPawn.EnPassantEligible)
+                            {
+                                boardClone.Squares[capturedPawnRow][move.Col] = null;
+                            }
+                        }
 
-                    // Undo the move
-                    board.Squares[fromRow][fromCol] = piece;
-                    board.Squares[toRow][toCol] = capturedPiece;
-                    piece.Position = (fromRow, fromCol);
+                        // Promotion (assuming promotion to Queen for simplicity)
+                        if ((isWhiteTurn && move.Row == 0) || (!isWhiteTurn && move.Row == 7))
+                        {
+                            boardClone.Squares[move.Row][move.Col] = new Queen
+                            {
+                                IsWhite = isWhiteTurn,
+                                Position = move
+                            };
+                        }
+                    }
 
+                    // Recursively evaluate the position
+                    int score = Minimax(game, boardClone, depth - 1, !isWhiteTurn, alpha, beta);
+
+                    // Update bestScore based on the evaluation
                     if (isWhiteTurn)
                     {
                         bestScore = Math.Max(bestScore, score);
@@ -254,24 +308,24 @@ namespace ChessAI.Models.AIs
 
             int evaluation = 0;
             var pieceValues = new Dictionary<Type, int>
-        {
-            { typeof(Pawn), 100 },
-            { typeof(Knight), 320 },
-            { typeof(Bishop), 330 },
-            { typeof(Rook), 500 },
-            { typeof(Queen), 900 },
-            { typeof(King), 20000 }
-        };
+            {
+                { typeof(Pawn), 100 },
+                { typeof(Knight), 320 },
+                { typeof(Bishop), 330 },
+                { typeof(Rook), 500 },
+                { typeof(Queen), 900 },
+                { typeof(King), 20000 }
+            };
 
             var piecePositionValues = new Dictionary<Type, int[,]>
-        {
-            { typeof(Pawn), PawnPositionValues },
-            { typeof(Knight), KnightPositionValues },
-            { typeof(Bishop), BishopPositionValues },
-            { typeof(Rook), RookPositionValues },
-            { typeof(Queen), QueenPositionValues },
-            { typeof(King), KingPositionValues }
-        };
+            {
+                { typeof(Pawn), PawnPositionValues },
+                { typeof(Knight), KnightPositionValues },
+                { typeof(Bishop), BishopPositionValues },
+                { typeof(Rook), RookPositionValues },
+                { typeof(Queen), QueenPositionValues },
+                { typeof(King), KingPositionValues }
+            };
 
             foreach (var row in board.Squares)
             {
@@ -311,22 +365,37 @@ namespace ChessAI.Models.AIs
                 return false;
             }
 
-            // Simulate the move
-            var originalPosition = piece.Position;
-            var capturedPiece = board.Squares[toRow][toCol];
-            board.Squares[originalPosition.Row][originalPosition.Col] = null;
-            board.Squares[toRow][toCol] = piece;
-            piece.Position = move;
+            // Clone the board to simulate the move
+            var boardClone = board.Clone();
+            var pieceClone = boardClone.Squares[piece.Position.Row][piece.Position.Col];
+            var capturedPiece = boardClone.Squares[toRow][toCol];
+
+            // Simulate the move on the cloned board
+            boardClone.Squares[pieceClone.Position.Row][pieceClone.Position.Col] = null;
+            boardClone.Squares[toRow][toCol] = pieceClone.Clone();
+            boardClone.Squares[toRow][toCol].Position = (toRow, toCol);
+
+            // Handle En Passant capture in simulation
+            Piece enPassantCapturedPawn = null;
+            if (pieceClone is Pawn pawn && board.IsEmpty(toRow, toCol) && toCol != piece.Position.Col)
+            {
+                // En Passant capture
+                int capturedPawnRow = piece.IsWhite ? toRow + 1 : toRow - 1;
+                enPassantCapturedPawn = boardClone.Squares[capturedPawnRow][toCol];
+                boardClone.Squares[capturedPawnRow][toCol] = null;
+            }
 
             // Check if the king is in check after the move
-            bool isSafe = !board.IsKingInCheck(piece.IsWhite);
+            bool isInCheck = boardClone.IsKingInCheck(piece.IsWhite);
 
-            // Undo the move
-            board.Squares[originalPosition.Row][originalPosition.Col] = piece;
-            board.Squares[toRow][toCol] = capturedPiece;
-            piece.Position = originalPosition;
+            // Restore captured pawn if en passant
+            if (enPassantCapturedPawn != null)
+            {
+                int capturedPawnRow = piece.IsWhite ? toRow + 1 : toRow - 1;
+                boardClone.Squares[capturedPawnRow][toCol] = enPassantCapturedPawn;
+            }
 
-            return isSafe;
+            return !isInCheck;
         }
     }
 }

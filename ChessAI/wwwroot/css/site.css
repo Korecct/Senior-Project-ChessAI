@@ -28,7 +28,6 @@ body {
     padding-bottom: 60px;
 }
 
-
 .main-content {
     flex: 1;
     display: flex;
@@ -429,9 +428,9 @@ body.dm .game-mode-indicator {
         color: #ff6262;
     }
 
-    .turn-mode-indicator strong {
-        color: #a290ff;
-    }
+.turn-mode-indicator strong {
+    color: #a290ff;
+}
 
 body.dm .turn-mode-indicator {
     background-color: rgba(85, 85, 85, 0.7);
@@ -704,10 +703,10 @@ button[type="button"].ai-button {
     cursor: not-allowed;
 }
 
-    button[type="button"].ai-button:hover {
-        background-color: #7b6cc5;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
+button[type="button"].ai-button:hover {
+    background-color: #7b6cc5;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
 
 body.dm button[type="button"].ai-button {
     background-color: #4c3838;
@@ -742,6 +741,114 @@ body.dm button[type="button"].ai-button {
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         transition: background-color var(--transition-speed), color var(--transition-speed), box-shadow var(--transition-speed);
     }
+
+.chess-board.flipped {
+    transform: rotate(180deg);
+}
+
+    .chess-board.flipped .chess-piece {
+        transform: rotate(180deg);
+    }
+
+.chess-piece.flipped-piece {
+    transform: rotate(0deg);
+}
+
+/* Rematch Button in Modal */
+.rematch-modal-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    margin-right: 10px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+    .rematch-modal-button:hover {
+        background-color: #45a049;
+    }
+
+/* Rematch Button in Sidebar */
+.rematch-button {
+    background-color: #008CBA;
+    color: white;
+    padding: 10px 20px;
+    margin-top: 20px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 100%;
+}
+
+    .rematch-button:hover {
+        background-color: #007bb5;
+    }
+
+/* Hidden by default */
+.rematch-button {
+    display: none;
+}
+
+/* Lobby Code Display Styles */
+.lobby-code-display {
+    margin-top: 10px;
+    padding: 10px;
+    border: 2px solid var(--board-border-color);
+    background-color: rgba(255, 255, 255, 0.59);
+    border-radius: 5px;
+    text-align: center;
+    font-size: 1.2rem;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+
+#joinLobbyCode {
+    width: 90%;
+    padding: 8px;
+    font-size: 1rem;
+    border: 2px solid var(--board-border-color);
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.8);
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed), background-color var(--transition-speed);
+    margin: 5px 0;
+    text-align: center;
+    color: #333;
+}
+
+    #joinLobbyCode:focus {
+        border-color: #c54c4c;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+body.dm #joinLobbyCode {
+    background-color: rgba(85, 85, 85, 0.7);
+    color: #ddd;
+    border-color: #ff6262;
+}
+
+    body.dm #joinLobbyCode:focus {
+        border-color: #ff8383;
+        box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+    }
+
+body.dm .lobby-code-display {
+    background-color: rgba(85, 85, 85, 0.7);
+    border-color: #ff6262;
+}
+
+.lobby-code-display span {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.lobby-code-display strong {
+    font-size: 1.5rem;
+    color: #a290ff;
+}
+
+body.dm .lobby-code-display strong {
+    color: #ff6262;
+}
 
 body.dm .chess-board.disabled::after {
     background-color: rgba(50, 50, 50, 0.7);
@@ -791,4 +898,560 @@ button[type="button"],
 .form-control,
 .select {
     transition: background-color var(--transition-speed), color var(--transition-speed), border-color var(--transition-speed);
+}
+
+/* Rules Page Custom Styles */
+
+/* Rules Container */
+.rules-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 20px;
+    background-color: rgba(255, 255, 255, 0.8); /* Light mode background */
+    border-radius: 10px;
+    max-width: 1200px;
+    margin: 0 auto;
+    transition: background-color var(--transition-speed);
+}
+
+body.dm .rules-container {
+    background-color: rgba(85, 85, 85, 0.9); /* Dark mode background */
+}
+
+/* Rule Section */
+.rule-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Rule Content */
+.rule-content {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    align-items: center;
+}
+
+/* Rule Text */
+.rule-text {
+    flex: 1;
+    background-color: rgba(255, 255, 255, 0.7); /* Light mode text background */
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
+body.dm .rule-text {
+    background-color: rgba(50, 50, 50, 0.7); /* Dark mode text background */
+    color: #ddd;
+}
+
+/* Rule GIF */
+.rule-gif {
+    flex: 1;
+    text-align: center;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+    .rule-gif img {
+        width: 100%;
+        height: auto; 
+        max-height: 300px; 
+        object-fit: contain; 
+    }
+
+/* Media Queries for Smaller Screens */
+@media (max-width: 1200px) {
+    .rule-gif {
+        max-width: 400px;
+    }
+
+        .rule-gif img {
+            max-height: 250px;
+        }
+}
+
+@media (max-width: 768px) {
+    .rule-content {
+        flex-direction: column;
+    }
+
+    .rule-gif {
+        max-width: 100%; /* Allow full width on smaller screens */
+    }
+
+        .rule-gif img {
+            max-height: 200px;
+        }
+}
+
+@media (max-width: 480px) {
+    .rule-gif img {
+        max-height: 150px;
+    }
+}
+
+/* Prevent overflow in parent containers */
+.rules-container,
+.rule-section,
+.rule-content,
+.pieces-container,
+.special-moves-container {
+    overflow: hidden;
+}
+
+/* Pieces and Special Moves Containers */
+.pieces-container,
+.special-moves-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+/* Piece and Special Move Items */
+.piece-item,
+.special-move-item {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 45%;
+    background-color: rgba(255, 255, 255, 0.7); /* Light mode item background */
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
+body.dm .piece-item,
+body.dm .special-move-item {
+    background-color: rgba(50, 50, 50, 0.7); /* Dark mode item background */
+    color: #ddd;
+}
+
+/* Margin for GIFs inside Piece and Special Move Items */
+.piece-item .rule-gif,
+.special-move-item .rule-gif {
+    margin-top: 10px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .rule-content {
+        flex-direction: column;
+    }
+
+    .piece-item,
+    .special-move-item {
+        flex: 1 1 100%;
+    }
+}
+
+/* Additional Styles to Match Chess Game */
+
+/* Headers */
+.rules-container h2 {
+    color: var(--board-border-color);
+}
+
+body.dm .rules-container h2 {
+    color: var(--board-border-color-dark);
+}
+
+.rule-section h2 {
+    border-bottom: 2px solid var(--highlight-color);
+    padding-bottom: 5px;
+}
+
+body.dm .rule-section h2 {
+    border-bottom: 2px solid var(--highlight-bg-dark);
+}
+
+/* Navigate Button Styling */
+.navigate-button {
+    display: inline-block;
+    padding: 10px 20px;
+    font-size: 1rem;
+    background-color: var(--board-border-color);
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    transition: background-color var(--button-transition), box-shadow var(--button-transition);
+}
+
+    .navigate-button:hover {
+        background-color: var(--highlight-color);
+    }
+
+body.dm .navigate-button {
+    background-color: var(--board-border-color-dark);
+}
+
+    body.dm .navigate-button:hover {
+        background-color: var(--highlight-bg-dark);
+    }
+
+    /* Welcome Section Styling */
+.welcome-section {
+    margin-bottom: 40px;
+}
+
+.welcome-section .display-4 {
+    font-size: 3rem;
+    font-weight: bold;
+}
+
+.welcome-section .lead {
+    font-size: 1.5rem;
+    color: var(--board-border-color);
+}
+
+/* Chess GIF Styling */
+.chess-gif-container {
+    margin-bottom: 40px;
+}
+
+.chess-gif {
+    width: 80%;
+    max-width: 600px;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform var(--transition-speed);
+}
+
+.chess-gif:hover {
+    transform: scale(1.05);
+}
+
+/* Play Button Styling */
+.play-button-container .navigate-button {
+    padding: 15px 30px;
+    font-size: 1.5rem;
+    background-color: #28a745;
+    color: white;
+    border-radius: 8px;
+    transition: background-color var(--button-transition), transform var(--transition-speed);
+    text-decoration: none;
+}
+
+.play-button-container .navigate-button:hover {
+    background-color: #218838;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Homepage Specific Styles */
+
+/* Common Box Styling */
+.homepage-box {
+    padding: 20px 30px;
+    border: 2px solid var(--board-border-color);
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.85);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+    .homepage-box h3 {
+        margin: 0;
+        padding: 0;
+    }
+
+    .homepage-box p,
+    .homepage-box ul {
+        margin-top: 10px;
+        font-size: 1.2rem;
+        line-height: 1.6;
+    }
+
+    .homepage-box ul {
+        list-style-type: disc;
+        padding-left: 20px;
+    }
+
+/* Dark Mode Adjustments for Boxes */
+body.dm .homepage-box {
+    background-color: rgba(85, 85, 85, 0.9);
+    border-color: var(--board-border-color-dark);
+    color: #ddd;
+}
+
+    body.dm .homepage-box h3 {
+        color: #fff;
+    }
+
+    body.dm .homepage-box ul {
+        list-style-type: circle;
+    }
+
+/* Title Styles */
+.homepage-title {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+    .homepage-title h1 {
+        font-size: 3.5rem;
+        font-weight: bold;
+        color: #333;
+        text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+        transition: color var(--transition-speed), text-shadow var(--transition-speed);
+    }
+
+body.dm .homepage-title h1 {
+    color: #fff;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+}
+
+.homepage-title h4 {
+    font-size: 1.5rem;
+    color: #555;
+    transition: color var(--transition-speed);
+}
+
+body.dm .homepage-title h4 {
+    color: #ccc;
+}
+
+/* Play Button Specific Styles */
+.play-button-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+    .play-button-container .gamemode-button.play-button {
+        padding: 15px 30px;
+        font-size: 1.5rem;
+        background-color: #28a745;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 220px;
+        height: 60px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        box-shadow: 0px 6px 6px rgba(0, 0, 0, 0.3);
+        position: relative;
+        overflow: hidden;
+        transition: background-color var(--button-transition), box-shadow var(--button-transition), transform var(--transition-speed);
+    }
+
+        .play-button-container .gamemode-button.play-button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: skewX(-45deg);
+            transition: all 0.5s;
+        }
+
+        .play-button-container .gamemode-button.play-button:hover::before {
+            left: 100%;
+        }
+
+        .play-button-container .gamemode-button.play-button:hover {
+            background-color: #218838;
+            transform: translateY(-3px);
+            box-shadow: 0px 8px 8px rgba(0, 0, 0, 0.4);
+        }
+
+/* Responsive Adjustment for Play Button */
+@media (max-width: 768px) {
+    .play-button-container .gamemode-button.play-button {
+        width: 180px;
+        height: 50px;
+        font-size: 1.3rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .play-button-container .gamemode-button.play-button {
+        width: 140px;
+        height: 40px;
+        font-size: 1.1rem;
+    }
+}
+
+.authors-box {
+    background-color: rgba(255, 255, 255, 0.85);
+    padding: 20px;
+    border: 2px solid var(--board-border-color);
+    border-radius: 10px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    transition: background-color var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+    max-width: 800px;
+    margin: 0 auto 30px auto;
+}
+
+body.dm .authors-box {
+    background-color: rgba(85, 85, 85, 0.9);
+    border-color: var(--board-border-color-dark);
+}
+
+.authors-box h3 {
+    margin-bottom: 20px;
+    font-size: 2rem;
+    color: #333;
+    transition: color var(--transition-speed);
+}
+
+body.dm .authors-box h3 {
+    color: #fff;
+}
+
+.authors-list {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.author-card {
+    background-color: #f9f9f9;
+    width: 220px; 
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+    text-align: center;
+}
+
+    .author-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+body.dm .author-card {
+    background-color: #4c3838;
+    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1);
+}
+
+    body.dm .author-card:hover {
+        box-shadow: 0 8px 16px rgba(255, 255, 255, 0.2);
+    }
+
+.author-photo {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.author-info {
+    padding: 10px;
+}
+
+    .author-info h4 {
+        margin: 10px 0 5px 0;
+        font-size: 1.3rem;
+        color: #333;
+        transition: color var(--transition-speed);
+    }
+
+body.dm .author-info h4 {
+    color: #fff;
+}
+
+.author-info p {
+    margin: 0;
+    font-size: 1rem;
+    color: #666;
+    transition: color var(--transition-speed);
+}
+
+body.dm .author-info p {
+    color: #ccc;
+}
+
+/* Responsive Authors Section */
+@media (max-width: 768px) {
+    .authors-list {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .author-card {
+        width: 80%; 
+    }
+}
+
+@media (max-width: 480px) {
+    .authors-list {
+        gap: 10px;
+    }
+
+    .author-card {
+        width: 100%;
+    }
+
+    .author-photo {
+        height: 150px;
+    }
+}
+
+.homepage-gif-container {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 1 / 1;
+    margin: 0 auto 40px auto;
+}
+
+.homepage-gif {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 15px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    animation: float 6s ease-in-out infinite;
+    background: transparent;
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+
+    100% {
+        transform: translateY(0px);
+    }
+}
+
+@media (max-width: 1200px) {
+    .homepage-gif-container {
+        max-width: 500px;
+    }
+}
+
+@media (max-width: 768px) {
+    .homepage-gif-container {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .homepage-gif-container {
+        max-width: 300px;
+    }
+
+    .homepage-gif {
+        border-radius: 10px;
+    }
 }

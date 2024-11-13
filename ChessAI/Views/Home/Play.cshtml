@@ -8,6 +8,8 @@
     <meta charset="UTF-8">
     <link rel="stylesheet" href="~/css/site.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- SignalR-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
 </head>
 <body>
     <input type="hidden" id="RequestVerificationToken" value="@Antiforgery.GetAndStoreTokens(ViewContext.HttpContext).RequestToken" />
@@ -99,7 +101,6 @@
                         }
                     </select>
                     <button type="button" class="ai-button" onclick="selectAIAndStartGame()">Start Game</button>
-                    <!--<button type="button" class="ai-button" onclick="setGameMode('PvAI')">Restart</button>-->
 
                     <div class="resign-button-container">
                         <button type="button" class="ai-button" onclick="resignGame()">Resign</button>
@@ -107,7 +108,7 @@
                 </div>
             }
 
-            <!-- PvP Selection UI (only visible in PvP mode) -->
+            <!-- Local PvP UI (only visible in LocalPvP mode) -->
             @if (Model.GameMode == "LocalPvP")
             {
                 <div class="ai-selection-container">
@@ -118,15 +119,37 @@
                 </div>
             }
 
+            <!-- Lobby creation and joining (Visible when in Online PvP mode) -->
+            @if (Model.GameMode == "OnlinePvP")
+            {
+                <div class="ai-selection-container lobby-container">
+                    <button type="button" id="createLobbyButton" class="ai-button" onclick="createLobby()">Create Lobby</button>
+                    <input type="text" id="joinLobbyCode" placeholder="Enter Lobby Code">
+                    <button type="button" id="joinLobbyButton" class="ai-button" onclick="joinLobby()">Join Lobby</button>
+
+                    <!-- Resign button container initially hidden -->
+                    <div class="resign-button-container" id="resignButtonContainer" style="display: none;">
+                        <button type="button" class="ai-button" onclick="resignGame()">Resign</button>
+                    </div>
+                </div>
+
+                <!-- Display the lobby code -->
+                <div id="lobbyCodeDisplay" class="lobby-code-display" style="display: none;">
+                    <span>Your Lobby Code:</span>
+                    <strong id="lobbyCodeText"></strong>
+                </div>
+            }
+
+            <!-- Game Mode Buttons -->
             <div class="gamemode-button-container">
-                <button type="button" class="gamemode-button @(Model.GameMode == "Tutorial" ? "active" : "")" name="Tutorial" onclick="setGameMode('Tutorial')">Tutorial</button>
+                <button type="button" class="gamemode-button @(Model.GameMode == "OnlinePvP" ? "active" : "")" name="Online PvP" onclick="setGameMode('OnlinePvP')">Online PvP</button>
                 <button type="button" class="gamemode-button @(Model.GameMode == "LocalPvP" ? "active" : "")" name="Local PvP" onclick="setGameMode('LocalPvP')">Local PvP</button>
                 <button type="button" class="gamemode-button @(Model.GameMode == "PvAI" ? "active" : "")" name="PvAI" onclick="setGameMode('PvAI')">PvAI</button>
             </div>
         </div>
     </div>
     <script>
-        (function () {
+        (async function () {
             let selectedPiece = null;
             let offsetX = 0, offsetY = 0;
             let originalSquare = null;
@@ -138,6 +161,7 @@
 
             let isGameOver = @Html.Raw(Json.Serialize(Model.Game.IsGameOver));
             let isWhiteTurn = @Html.Raw(Json.Serialize(Model.Game.IsWhiteTurn));
+            let isBoardFlipped = false; // Flag to indicate if the board is flipped (for black player)
 
             const sounds = {
                 Move: new Audio('/sounds/move.mp3'),
@@ -194,6 +218,12 @@
                     return;
                 }
 
+                // In Online PvP mode, check if it's the player's turn
+                if (gameMode === 'OnlinePvP' && ((isWhiteTurn && playerColor !== 'white') || (!isWhiteTurn && playerColor !== 'black'))) {
+                    // Not this player's turn
+                    return;
+                }
+
                 const pieceColor = event.target.dataset.pieceColor;
 
                 if ((isWhiteTurn && pieceColor !== 'white') || (!isWhiteTurn && pieceColor !== 'black')) {
@@ -211,6 +241,13 @@
 
                 selectedPiece.style.zIndex = 1000;
                 selectedPiece.setPointerCapture(event.pointerId);
+
+                // Ensure the piece retains the flipped class if the board is flipped
+                if (isBoardFlipped) {
+                    selectedPiece.classList.add('flipped-piece');
+                } else {
+                    selectedPiece.classList.remove('flipped-piece');
+                }
 
                 // Highlight possible moves
                 const fromRow = parseInt(selectedPiece.dataset.row, 10);
@@ -257,9 +294,22 @@
 
             function moveAt(clientX, clientY) {
                 const parentRect = originalSquare.getBoundingClientRect();
-                const x = clientX - parentRect.left - offsetX;
-                const y = clientY - parentRect.top - offsetY;
-                selectedPiece.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+                let x, y;
+
+                // Calculate x and y based on whether the board is flipped
+                if (isBoardFlipped) {
+                    // Adjust for normal movement but apply rotation only visually
+                    x = clientX - parentRect.left - offsetX;
+                    y = clientY - parentRect.top - offsetY;
+                } else {
+                    // Normal movement if the board is not flipped
+                    x = clientX - parentRect.left - offsetX;
+                    y = clientY - parentRect.top - offsetY;
+                }
+
+                // Apply visual rotation without changing coordinates for flipped board
+                const rotation = isBoardFlipped ? 'rotate(180deg)' : '';
+                selectedPiece.style.transform = `${rotation} translate3d(${x}px, ${y}px, 0)`;
             }
 
             function getSquareUnderPointer(x, y) {
@@ -270,6 +320,8 @@
             function resetPiecePosition(piece) {
                 piece.style.transform = '';
                 piece.style.zIndex = '';
+                // Remove the flipped-piece class after dropping
+                piece.classList.remove('flipped-piece');
             }
 
             document.addEventListener('click', function (event) {
@@ -296,26 +348,30 @@
             }
 
             function getValidMoves(row, col) {
-                fetch('/Home/GetValidMoves', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': requestVerificationToken
-                    },
-                    body: JSON.stringify({ row, col })
-                })
-                    .then(response => {
-                        if (response.ok) return response.json();
-                        throw new Error('Failed to fetch valid moves.');
+                if (gameMode === 'OnlinePvP') {
+                    connection.invoke('GetValidMoves', lobbyCode, row, col);
+                } else {
+                    fetch('/Home/GetValidMoves', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': requestVerificationToken
+                        },
+                        body: JSON.stringify({ row, col })
                     })
-                    .then(validMoves => highlightValidMoves(validMoves))
-                    .catch(error => console.error('Error:', error));
+                        .then(response => {
+                            if (response.ok) return response.json();
+                            throw new Error('Failed to fetch valid moves.');
+                        })
+                        .then(validMoves => highlightValidMoves(validMoves))
+                        .catch(error => console.error('Error:', error));
+                }
             }
 
             function highlightValidMoves(moves) {
                 moves.forEach(move => {
-                    const row = move.Row ?? move.row;
-                    const col = move.Col ?? move.col;
+                    const row = move.row;
+                    const col = move.col;
                     const square = document.querySelector(`.chess-square[data-row='${row}'][data-col='${col}']`);
                     if (square) {
                         square.classList.add('highlight');
@@ -339,23 +395,28 @@
                 isGameBusy = true;
 
                 try {
-                    const response = await fetch('/Home/ResignGame', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': requestVerificationToken
+                    if (gameMode === 'OnlinePvP') {
+                        await connection.invoke('ResignGame', lobbyCode);
+                        // The game will end when we receive 'GameOver' from the hub
+                    } else {
+                        const response = await fetch('/Home/ResignGame', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': requestVerificationToken
+                            }
+                        });
+
+                        if (!response.ok) throw new Error('Failed to resign the game.');
+
+                        const data = await response.json();
+
+                        if (data.isGameOver) {
+                            handleGameOver(data.gameResult);
                         }
-                    });
 
-                    if (!response.ok) throw new Error('Failed to resign the game.');
-
-                    const data = await response.json();
-
-                    if (data.isGameOver) {
-                        handleGameOver(data.gameResult);
+                        isGameBusy = false;
                     }
-
-                    isGameBusy = false;
                 } catch (error) {
                     console.error('Error:', error);
                     alert('An error occurred while resigning the game.');
@@ -379,6 +440,11 @@
 
                 isGameOver = true;
 
+                // Hide the resign button as the game is over
+                const resignButtonContainer = document.getElementById('resignButtonContainer');
+                if (resignButtonContainer) {
+                    resignButtonContainer.style.display = 'none';
+                }
             }
 
             function updateTurnIndicator(isWhiteTurnParam, isWhiteKingInCheck, isBlackKingInCheck, isGameOverParam, message) {
@@ -387,11 +453,13 @@
                     return;
                 }
 
-                if (message) {
+                // Only display the message if it's not null or empty
+                if (message && message.trim() !== "") {
                     turnIndicator.innerHTML = `<span>${message}</span>`;
                     return;
                 }
 
+                // Display whose turn it is
                 let html = `<span><strong>${isWhiteTurnParam ? "White's" : "Black's"}</strong> turn.</span>`;
                 if (isWhiteKingInCheck) {
                     html += '<div class="check-indicator">White check!</div>';
@@ -402,51 +470,261 @@
                 turnIndicator.innerHTML = html;
             }
 
+            // Game Mode Variable
+            let gameMode = '@Model.GameMode';
+
+            // Player color and lobby code for Online PvP
+            let playerColor = null;
+            let lobbyCode = null;
+
+            // SignalR connection
+            let connection = null;
+
+            if (gameMode === 'OnlinePvP') {
+                // Establish SignalR connection
+                connection = new signalR.HubConnectionBuilder()
+                    .withUrl('/chessHub')
+                    .build();
+
+                await connection.start();
+
+                // Handle messages from the hub
+                connection.on('LobbyCreated', function (code) {
+                    // Display the lobby code in the sidebar
+                    lobbyCode = code;
+                    playerColor = 'white';
+                    isWhiteTurn = true;
+
+                    // Update UI to indicate waiting for opponent
+                    document.getElementById('createLobbyButton').disabled = true;
+                    document.getElementById('joinLobbyButton').disabled = true;
+                    document.getElementById('joinLobbyCode').disabled = true;
+                    document.getElementById('turnIndicator').innerHTML = '<span>Waiting for opponent to join...</span>';
+
+                    // Show the lobby code display
+                    const lobbyCodeDisplay = document.getElementById('lobbyCodeDisplay');
+                    const lobbyCodeText = document.getElementById('lobbyCodeText');
+                    lobbyCodeText.textContent = code;
+                    lobbyCodeDisplay.style.display = 'block';
+                });
+
+                connection.on('LobbyCreationFailed', function (message) {
+                    alert('Failed to create lobby: ' + message);
+                });
+
+                connection.on('StartGame', function (code) {
+                    // Display the lobby code for the player who joined
+                    if (playerColor === 'black') {
+                        const lobbyCodeDisplay = document.getElementById('lobbyCodeDisplay');
+                        const lobbyCodeText = document.getElementById('lobbyCodeText');
+                        lobbyCodeText.textContent = code;
+                        lobbyCodeDisplay.style.display = 'block';
+                    }
+
+                    // Show the resign button as the game has started
+                    const resignButtonContainer = document.getElementById('resignButtonContainer');
+                    if (resignButtonContainer) {
+                        resignButtonContainer.style.display = 'block';
+                    }
+
+                    if (playerColor === 'white') {
+                        document.getElementById('turnIndicator').innerHTML = '<span>Your turn.</span>';
+                    } else {
+                        document.getElementById('turnIndicator').innerHTML = '<span>Opponent\'s turn.</span>';
+                        // Flip the board for black player
+                        flipBoard();
+                    }
+                });
+
+                connection.on('LobbyJoinFailed', function (message) {
+                    alert('Failed to join lobby: ' + message);
+                });
+
+                connection.on('ReceiveMove', function (moveDetails) {
+                    const { fromRow, fromCol, toRow, toCol } = moveDetails;
+                    movePieceInUI(fromRow, fromCol, toRow, toCol, moveDetails);
+
+                    // Correctly update isWhiteTurn using camelCase
+                    isWhiteTurn = moveDetails.isWhiteTurn;
+                    console.log(`Move received. Next turn: ${isWhiteTurn ? "White" : "Black"}`);
+
+                    // Pass gameResult only if the game is over
+                    const message = moveDetails.isGameOver ? moveDetails.gameResult : null;
+
+                    updateTurnIndicator(
+                        moveDetails.isWhiteTurn,
+                        moveDetails.isWhiteKingInCheck,
+                        moveDetails.isBlackKingInCheck,
+                        moveDetails.isGameOver,
+                        message
+                    );
+
+                    // Play appropriate sounds based on move details
+                    if (moveDetails.isCheckmate) {
+                        playSound('Checkmate');
+                    } else if (moveDetails.isCheck) {
+                        playSound('Check');
+                    } else if (moveDetails.isCastle) {
+                        playSound('Castle');
+                    } else if (moveDetails.isCapture || moveDetails.isEnPassantCapture) {
+                        playSound('Capture');
+                    } else if (moveDetails.isPromotion) {
+                        playSound('Promotion');
+                    } else {
+                        playSound('Move');
+                    }
+
+                    if (moveDetails.isGameOver) {
+                        handleGameOver(moveDetails.gameResult);
+                    }
+                });
+
+                connection.on('InvalidMove', function (message) {
+                    alert('Invalid move: ' + message);
+                    if (selectedPiece) resetPiecePosition(selectedPiece);
+                    isGameBusy = false;
+                });
+
+                connection.on('ReceiveValidMoves', function (validMoves) {
+                    highlightValidMoves(validMoves);
+                });
+
+                connection.on('GameOver', function (gameResult) {
+                    handleGameOver(gameResult);
+                    // Hide the resign button as the game is over
+                    const resignButtonContainer = document.getElementById('resignButtonContainer');
+                    if (resignButtonContainer) {
+                        resignButtonContainer.style.display = 'none';
+                    }
+                });
+
+                connection.on('OpponentDisconnected', function (message) {
+
+                    // Check if the game is already over
+                    if (!isGameOver) {
+                        alert(message);
+                        handleGameOver("Opponent has disconnected. You win!");
+                    }
+                    // Else, do nothing or notify that the game has already concluded.
+                });
+
+                // Function to create lobby
+                window.createLobby = function () {
+                    connection.invoke('CreateLobby');
+                };
+
+                // Function to join lobby
+                window.joinLobby = function () {
+                    const code = document.getElementById('joinLobbyCode').value.trim().toUpperCase();
+                    if (!code) {
+                        alert('Please enter a lobby code.');
+                        return;
+                    }
+                    connection.invoke('JoinLobby', code)
+                        .then(function () {
+                            lobbyCode = code;
+                            playerColor = 'black';
+                            isWhiteTurn = true;
+
+                            // Flip the board for black player
+                            flipBoard();
+
+                            // Update UI
+                            document.getElementById('createLobbyButton').disabled = true;
+                            document.getElementById('joinLobbyButton').disabled = true;
+                            document.getElementById('joinLobbyCode').disabled = true;
+                            document.getElementById('turnIndicator').innerHTML = '<span>Opponent\'s turn.</span>';
+                        })
+                        .catch(function (err) {
+                            alert('Failed to join lobby: ' + err.toString());
+                        });
+                };
+
+                function flipBoard() {
+                    const chessBoard = document.getElementById('chessBoard');
+                    chessBoard.classList.add('flipped');
+                    isBoardFlipped = true;
+
+                    // Add flipped-piece class to all pieces
+                    document.querySelectorAll('.chess-piece').forEach(piece => {
+                        piece.classList.add('flipped-piece');
+                    });
+
+                    // Update turn indicator if necessary
+                    if (playerColor === 'black') {
+                        document.getElementById('turnIndicator').innerHTML = '<span>Black\'s turn.</span>';
+                    }
+                }
+
+                // Expose functions to global scope
+                window.flipBoard = flipBoard;
+            }
+
             async function postMove(fromRow, fromCol, toRow, toCol) {
+                // In Online PvP mode, check if it's the player's turn
+                if (gameMode === 'OnlinePvP' && ((isWhiteTurn && playerColor !== 'white') || (!isWhiteTurn && playerColor !== 'black'))) {
+                    alert('It is not your turn.');
+                    if (selectedPiece) resetPiecePosition(selectedPiece);
+                    return;
+                }
+
                 if (isGameBusy) return;
                 isGameBusy = true;
 
                 try {
-                    const response = await fetch('/Home/MakeMove', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'RequestVerificationToken': requestVerificationToken
-                        },
-                        body: JSON.stringify({ fromRow, fromCol, toRow, toCol })
-                    });
+                    if (gameMode === 'OnlinePvP') {
+                        // Send the move to the hub
+                        await connection.invoke('SendMove', lobbyCode, { FromRow: fromRow, FromCol: fromCol, ToRow: toRow, ToCol: toCol });
 
-                    if (!response.ok) throw new Error('Invalid move.');
+                        // The move will be applied when we receive "ReceiveMove"" from the hub
+                        isGameBusy = false;
+                    } else {
+                        // Local PvP or PvAI mode
+                        const response = await fetch('/Home/MakeMove', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'RequestVerificationToken': requestVerificationToken
+                            },
+                            body: JSON.stringify({ FromRow: fromRow, FromCol: fromCol, ToRow: toRow, ToCol: toCol })
+                        });
 
-                    const data = await response.json();
+                        if (!response.ok) throw new Error('Invalid move.');
 
-                    if (data.success) {
-                        movePieceInUI(fromRow, fromCol, toRow, toCol, data);
-                        playPlayerMoveSound(data);
+                        const data = await response.json();
 
-                        if (data.isGameOver) {
-                            handleGameOver(data.gameResult);
-                            isGameBusy = false;
-                            return;
-                        }
+                        if (data.success) {
+                            movePieceInUI(fromRow, fromCol, toRow, toCol, data);
+                            playPlayerMoveSound(data);
 
-                        if (data.aiMove) {
-                            updateTurnIndicator(null, null, null, false, "AI is thinking...");
-                            setTimeout(() => {
-                                makeAIMove(data.aiMove.from, data.aiMove.to, data);
+                            if (data.aiMove) {
+                                updateTurnIndicator(null, null, null, false, "AI is thinking...");
+                                setTimeout(() => {
+                                    makeAIMove(data.aiMove.from, data.aiMove.to, data);
+                                    updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver, data.isGameOver ? data.gameResult : null);
+                                    isWhiteTurn = data.isWhiteTurn; // Update the turn
+
+                                    if (data.isGameOver) {
+                                        handleGameOver(data.gameResult);
+                                    }
+
+                                    isGameBusy = false;
+                                }, 1000); // Delay before AI moves
+                            } else {
                                 updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver, data.isGameOver ? data.gameResult : null);
                                 isWhiteTurn = data.isWhiteTurn; // Update the turn
+
+                                if (data.isGameOver) {
+                                    handleGameOver(data.gameResult);
+                                }
+
                                 isGameBusy = false;
-                            }, 1000); // Delay before AI moves
+                            }
                         } else {
-                            updateTurnIndicator(data.isWhiteTurn, data.isWhiteKingInCheck, data.isBlackKingInCheck, data.isGameOver, data.isGameOver ? data.gameResult : null);
-                            isWhiteTurn = data.isWhiteTurn; // Update the turn
+                            alert('Invalid move.');
+                            resetPiecePosition(selectedPiece);
                             isGameBusy = false;
                         }
-                    } else {
-                        alert('Invalid move.');
-                        resetPiecePosition(selectedPiece);
-                        isGameBusy = false;
                     }
                 } catch (error) {
                     console.error('Error:', error);
@@ -472,13 +750,13 @@
                         resetPiecePosition(piece);
 
                         // Handle special moves
-                        if (data.playerIsPromotion) {
+                        if (data && (data.playerIsPromotion || data.isPromotion)) {
                             promotePawn(piece);
                         }
-                        if (data.playerIsEnPassantCapture) {
+                        if (data && (data.playerIsEnPassantCapture || data.isEnPassantCapture)) {
                             captureEnPassant(piece, toRow, toCol);
                         }
-                        if (data.playerIsCastle) {
+                        if (data && (data.playerIsCastle || data.isCastle)) {
                             castleRook(piece, fromRow, fromCol, toCol);
                         }
                     }
@@ -553,8 +831,13 @@
             }
 
             function makeAIMove(from, to, data) {
-                const fromSquare = document.querySelector(`.chess-square[data-row='${from.row}'][data-col='${from.col}']`);
-                const toSquare = document.querySelector(`.chess-square[data-row='${to.row}'][data-col='${to.col}']`);
+                const fromRow = from.row ?? from.Row;
+                const fromCol = from.col ?? from.Col;
+                const toRow = to.row ?? to.Row;
+                const toCol = to.col ?? to.Col;
+
+                const fromSquare = document.querySelector(`.chess-square[data-row='${fromRow}'][data-col='${fromCol}']`);
+                const toSquare = document.querySelector(`.chess-square[data-row='${toRow}'][data-col='${toCol}']`);
 
                 if (fromSquare && toSquare) {
                     const piece = fromSquare.querySelector('.chess-piece');
@@ -563,8 +846,8 @@
                         if (capturedPiece) capturedPiece.remove();
 
                         toSquare.appendChild(piece);
-                        piece.dataset.row = to.row;
-                        piece.dataset.col = to.col;
+                        piece.dataset.row = toRow;
+                        piece.dataset.col = toCol;
                         resetPiecePosition(piece);
 
                         // Handle special moves
@@ -572,20 +855,21 @@
                             promotePawn(piece);
                         }
                         if (data.aiIsEnPassantCapture) {
-                            captureEnPassant(piece, to.row, to.col);
+                            captureEnPassant(piece, toRow, toCol);
                         }
                         if (data.aiIsCastle) {
-                            castleRook(piece, from.row, from.col, to.col);
+                            castleRook(piece, fromRow, fromCol, toCol);
                         }
 
                         playAIMoveSound(data);
 
+                        // Update the turn
+                        isWhiteTurn = data.isWhiteTurn;
+
+                        // Handle game over if the game ends after AI's move
                         if (data.isGameOver) {
                             handleGameOver(data.gameResult);
                         }
-
-                        // Update the turn
-                        isWhiteTurn = data.isWhiteTurn;
                     }
                 }
             }
@@ -677,7 +961,7 @@
                     });
             }
 
-            // Debounce function to limit the rate at which a function can fire.
+            // Throttle function to limit the rate at which a function can fire
             function throttle(fn, limit) {
                 let lastFunc;
                 let lastRan;
@@ -702,6 +986,7 @@
             window.restartGame = restartGame;
             window.selectAIAndStartGame = selectAIAndStartGame;
             window.setGameMode = setGameMode;
+
         })();
     </script>
 

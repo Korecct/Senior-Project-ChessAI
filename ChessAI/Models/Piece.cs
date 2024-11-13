@@ -12,6 +12,8 @@ namespace ChessAI.Models
         {
             return GetValidMoves(board);
         }
+
+        public abstract Piece Clone();
     }
 
     [Serializable]
@@ -67,6 +69,17 @@ namespace ChessAI.Models
 
             return moves;
         }
+
+        public override Piece Clone()
+        {
+            return new Pawn
+            {
+                IsWhite = this.IsWhite,
+                Position = this.Position,
+                HasMoved = this.HasMoved,
+                EnPassantEligible = this.EnPassantEligible
+            };
+        }
     }
 
     [Serializable]
@@ -114,6 +127,16 @@ namespace ChessAI.Models
 
             return moves;
         }
+
+        public override Piece Clone()
+        {
+            return new Rook
+            {
+                IsWhite = this.IsWhite,
+                Position = this.Position,
+                HasMoved = this.HasMoved
+            };
+        }
     }
 
     [Serializable]
@@ -145,6 +168,15 @@ namespace ChessAI.Models
             }
 
             return moves;
+        }
+
+        public override Piece Clone()
+        {
+            return new Knight
+            {
+                IsWhite = this.IsWhite,
+                Position = this.Position
+            };
         }
     }
 
@@ -191,6 +223,15 @@ namespace ChessAI.Models
 
             return moves;
         }
+
+        public override Piece Clone()
+        {
+            return new Bishop
+            {
+                IsWhite = this.IsWhite,
+                Position = this.Position
+            };
+        }
     }
 
     [Serializable]
@@ -209,6 +250,15 @@ namespace ChessAI.Models
 
             return moves;
         }
+
+        public override Piece Clone()
+        {
+            return new Queen
+            {
+                IsWhite = this.IsWhite,
+                Position = this.Position
+            };
+        }
     }
 
     [Serializable]
@@ -219,7 +269,20 @@ namespace ChessAI.Models
         public override List<(int Row, int Col)> GetValidMoves(Board board)
         {
             var moves = new List<(int Row, int Col)>();
-            int[] offsets = [-1, 0, 1];
+            int[] offsets = { -1, 0, 1 };
+
+            // Find the opponent kings position
+            bool isWhite = this.IsWhite;
+            (int OpponentRow, int OpponentCol) opponentKingPosition;
+            try
+            {
+                opponentKingPosition = board.FindKingPosition(!isWhite);
+            }
+            catch (Exception)
+            {
+                // Opponent king not found; handle as needed
+                opponentKingPosition = (-1, -1);
+            }
 
             foreach (int rowOffset in offsets)
             {
@@ -231,6 +294,13 @@ namespace ChessAI.Models
                         int newCol = Position.Col + colOffset;
                         if (board.IsWithinBounds(newRow, newCol))
                         {
+                            // Prevent moving adjacent to the opponent king
+                            if (Math.Abs(newRow - opponentKingPosition.OpponentRow) <= 1 &&
+                                Math.Abs(newCol - opponentKingPosition.OpponentCol) <= 1)
+                            {
+                                continue; // Skip this move as it would place the king adjacent to the opponents king
+                            }
+
                             if (board.IsEmpty(newRow, newCol) || board.IsEnemyPiece(newRow, newCol, IsWhite))
                             {
                                 moves.Add((newRow, newCol));
@@ -281,9 +351,9 @@ namespace ChessAI.Models
             if (board.Squares[row][rookCol] is Rook rook && rook.IsWhite == IsWhite && !rook.HasMoved)
             {
                 // Check that the squares the king passes through are not under attack
-                for (int c = col + direction; c != col + 2 * direction; c += direction)
+                for (int c = col; c != rookCol; c += direction)
                 {
-                    if (board.IsSquareUnderAttack(row, c, !IsWhite))
+                    if (board.IsSquareUnderAttack(row, c, !IsWhite, out _))
                     {
                         return false;
                     }
@@ -294,11 +364,34 @@ namespace ChessAI.Models
             return false;
         }
 
+        public override Piece Clone()
+        {
+            return new King
+            {
+                IsWhite = this.IsWhite,
+                Position = this.Position,
+                HasMoved = this.HasMoved
+            };
+        }
+
         public override List<(int Row, int Col)> GetValidMovesIgnoringCheck(Board board)
         {
             // Exclude castling to avoid infinite recursion
             var moves = new List<(int Row, int Col)>();
             int[] offsets = [-1, 0, 1];
+
+            // Find the opponent king's position
+            bool isWhite = this.IsWhite;
+            (int OpponentRow, int OpponentCol) opponentKingPosition;
+            try
+            {
+                opponentKingPosition = board.FindKingPosition(!isWhite);
+            }
+            catch (Exception)
+            {
+                // Opponent king not found; handle as needed
+                opponentKingPosition = (-1, -1);
+            }
 
             foreach (int rowOffset in offsets)
             {
@@ -310,6 +403,13 @@ namespace ChessAI.Models
                         int newCol = Position.Col + colOffset;
                         if (board.IsWithinBounds(newRow, newCol))
                         {
+                            // Prevent moving adjacent to the opponent king
+                            if (Math.Abs(newRow - opponentKingPosition.OpponentRow) <= 1 &&
+                                Math.Abs(newCol - opponentKingPosition.OpponentCol) <= 1)
+                            {
+                                continue; // Skip this move as it would place the king adjacent to the opponents king
+                            }
+
                             if (board.IsEmpty(newRow, newCol) || board.IsEnemyPiece(newRow, newCol, IsWhite))
                             {
                                 moves.Add((newRow, newCol));
