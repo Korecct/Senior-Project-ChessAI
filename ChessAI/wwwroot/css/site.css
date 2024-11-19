@@ -728,7 +728,8 @@ button[type="button"].ai-button {
     cursor: pointer;
     transition: background-color var(--button-transition), box-shadow var(--button-transition);
     width: 100%;
-    margin-bottom: 10px;
+    margin-top: 5px;
+    margin-bottom: 5px;
 }
 
 .ai-button:disabled {
