@@ -210,8 +210,27 @@
             const chessBoard = document.getElementById('chessBoard');
             chessBoard.addEventListener('pointerdown', handlePointerDown);
 
+            function handleLostPointerCapture(event) {
+                if (selectedPiece) {
+                    resetPiecePosition(selectedPiece);
+                    clearHighlights();
+                    document.removeEventListener('pointermove', throttledPointerMove);
+                    document.removeEventListener('pointerup', handlePointerUp);
+                    selectedPiece.removeEventListener('lostpointercapture', handleLostPointerCapture);
+                    selectedPiece = null;
+                    originalSquare = null;
+                }
+            }
+
             function handlePointerDown(event) {
                 if (!event.target.classList.contains('chess-piece')) return;
+
+                // Deselect any previously selected piece
+                if (selectedPiece) {
+                    clearHighlights();
+                    selectedPiece = null;
+                    originalSquare = null;
+                }
 
                 if (isGameOver || isGameBusy) {
                     // Prevent moving pieces if the game is over or if AI is busy
@@ -234,6 +253,10 @@
                 selectedPiece = event.target;
                 originalSquare = selectedPiece.parentElement;
 
+                // Reset any transform and transition properties
+                selectedPiece.style.transition = '';
+                selectedPiece.style.transform = '';
+
                 // Get the touch/mouse position relative to the piece
                 const rect = selectedPiece.getBoundingClientRect();
                 offsetX = event.clientX - rect.left;
@@ -241,6 +264,7 @@
 
                 selectedPiece.style.zIndex = 1000;
                 selectedPiece.setPointerCapture(event.pointerId);
+                selectedPiece.addEventListener('lostpointercapture', handleLostPointerCapture);
 
                 // Ensure the piece retains the flipped class if the board is flipped
                 if (isBoardFlipped) {
@@ -285,6 +309,9 @@
                     clearHighlights();
                     document.removeEventListener('pointermove', throttledPointerMove);
                     document.removeEventListener('pointerup', handlePointerUp);
+
+                    selectedPiece.removeEventListener('lostpointercapture', handleLostPointerCapture);
+
                     selectedPiece = null;
                     originalSquare = null;
 
@@ -318,22 +345,74 @@
             }
 
             function resetPiecePosition(piece) {
-                piece.style.transform = '';
+                // Reset to rotation only if board is flipped
+                const rotation = isBoardFlipped ? 'rotate(180deg)' : '';
+                piece.style.transform = rotation;
                 piece.style.zIndex = '';
                 // Remove the flipped-piece class after dropping
                 piece.classList.remove('flipped-piece');
+                if (originalSquare && piece.parentElement !== originalSquare) {
+                    originalSquare.appendChild(piece);
+                }
             }
 
+            // Event Delegation for click events
             document.addEventListener('click', function (event) {
-                if (event.target.classList.contains('chess-square')) {
+                if (selectedPiece) {
                     squareClick(event);
+                } else if (event.target.classList.contains('chess-piece')) {
+                    pieceClick(event);
                 }
             });
+
+            function pieceClick(event) {
+                // Deselect any previously selected piece
+                if (selectedPiece) {
+                    clearHighlights();
+                    selectedPiece = null;
+                    originalSquare = null;
+                }
+
+                // Check if the game is over or busy
+                if (isGameOver || isGameBusy) {
+                    return;
+                }
+
+                // In Online PvP mode, check if its the players turn
+                if (gameMode === 'OnlinePvP' && ((isWhiteTurn && playerColor !== 'white') || (!isWhiteTurn && playerColor !== 'black'))) {
+                    return;
+                }
+
+                const pieceColor = event.target.dataset.pieceColor;
+
+                if ((isWhiteTurn && pieceColor !== 'white') || (!isWhiteTurn && pieceColor !== 'black')) {
+                    return;
+                }
+
+                selectedPiece = event.target;
+                originalSquare = selectedPiece.parentElement;
+
+                // Highlight possible moves
+                const fromRow = parseInt(selectedPiece.dataset.row, 10);
+                const fromCol = parseInt(selectedPiece.dataset.col, 10);
+                getValidMoves(fromRow, fromCol);
+            }
 
             function squareClick(event) {
                 if (!selectedPiece) return;
 
-                const targetSquare = event.target;
+                let targetSquare;
+
+                // Determine the target square regardless of whether we clicked on a piece or a square
+                if (event.target.classList.contains('chess-square')) {
+                    targetSquare = event.target;
+                } else if (event.target.classList.contains('chess-piece')) {
+                    targetSquare = event.target.parentElement;
+                } else {
+                    return;
+                }
+
+                // Check if the target square is highlighted
                 if (!targetSquare.classList.contains('highlight')) return;
 
                 const fromRow = parseInt(selectedPiece.dataset.row, 10);
@@ -739,28 +818,99 @@
                 const toSquare = document.querySelector(`.chess-square[data-row='${toRow}'][data-col='${toCol}']`);
 
                 if (fromSquare && toSquare) {
+                    clearMoveHighlights();
+
                     const piece = fromSquare.querySelector('.chess-piece');
                     if (piece) {
+                        piece.style.pointerEvents = 'none';
+
                         const capturedPiece = toSquare.querySelector('.chess-piece');
-                        if (capturedPiece) capturedPiece.remove();
+
+                        const startRect = piece.getBoundingClientRect();
 
                         toSquare.appendChild(piece);
                         piece.dataset.row = toRow;
                         piece.dataset.col = toCol;
-                        resetPiecePosition(piece);
+
+                        piece.style.transform = '';
+                        piece.style.transition = '';
+
+                        const endRect = piece.getBoundingClientRect();
+
+                        let deltaX = startRect.left - endRect.left;
+                        let deltaY = startRect.top - endRect.top;
+
+                        // Include rotation if the board is flipped
+                        const rotation = isBoardFlipped ? 'rotate(180deg)' : '';
+
+                        // Adjust deltaX and deltaY when board is flipped
+                        if (isBoardFlipped) {
+                            deltaX *= -1;
+                            deltaY *= -1;
+                        }
+
+                        // Apply the transform: translate first, then rotate
+                        piece.style.transform = `translate(${deltaX}px, ${deltaY}px) ${rotation}`;
+
+                        piece.offsetWidth;
+
+                        piece.style.transition = `transform var(--piece-transition-duration) var(--piece-transition-timing)`;
+
+                        // Remove the translation but keep rotation
+                        piece.style.transform = rotation;
+
+                        piece.addEventListener('transitionend', function handleTransitionEnd(event) {
+                            if (event.propertyName === 'transform') {
+                                piece.removeEventListener('transitionend', handleTransitionEnd);
+                                piece.style.pointerEvents = '';
+                                // Reset transform and transition properties
+                                piece.style.transform = '';
+                                piece.style.transition = '';
+                            }
+                        });
+
+                        if (capturedPiece) {
+                            // Delay the removal of the captured piece until after the animation
+                            setTimeout(() => {
+                                capturedPiece.remove();
+                            }, parseFloat(getComputedStyle(piece).getPropertyValue('--piece-transition-duration')) * 1000);
+                            // Add capture highlight class
+                            toSquare.classList.add('capture-highlight');
+                        } else {
+                            // Add move highlight class
+                            toSquare.classList.add('move-highlight');
+                        }
+
+                        // Highlight the fromSquare
+                        fromSquare.classList.add('move-highlight');
 
                         // Handle special moves
                         if (data && (data.playerIsPromotion || data.isPromotion)) {
-                            promotePawn(piece);
+                            // Delay promotion until after the animation
+                            setTimeout(() => {
+                                promotePawn(piece);
+                            }, parseFloat(getComputedStyle(piece).getPropertyValue('--piece-transition-duration')) * 1000);
                         }
                         if (data && (data.playerIsEnPassantCapture || data.isEnPassantCapture)) {
-                            captureEnPassant(piece, toRow, toCol);
+                            // Delay capture until after the animation
+                            setTimeout(() => {
+                                captureEnPassant(piece, toRow, toCol);
+                            }, parseFloat(getComputedStyle(piece).getPropertyValue('--piece-transition-duration')) * 1000);
                         }
                         if (data && (data.playerIsCastle || data.isCastle)) {
-                            castleRook(piece, fromRow, fromCol, toCol);
+                            // Delay rook movement until after the animation
+                            setTimeout(() => {
+                                castleRook(piece, fromRow, fromCol, toCol);
+                            }, parseFloat(getComputedStyle(piece).getPropertyValue('--piece-transition-duration')) * 1000);
                         }
                     }
                 }
+            }
+
+            function clearMoveHighlights() {
+                document.querySelectorAll('.move-highlight, .capture-highlight').forEach(square => {
+                    square.classList.remove('move-highlight', 'capture-highlight');
+                });
             }
 
             function promotePawn(piece) {
@@ -840,25 +990,91 @@
                 const toSquare = document.querySelector(`.chess-square[data-row='${toRow}'][data-col='${toCol}']`);
 
                 if (fromSquare && toSquare) {
+                    clearMoveHighlights();
+
                     const piece = fromSquare.querySelector('.chess-piece');
                     if (piece) {
+                        const chessBoard = document.getElementById('chessBoard');
+                        chessBoard.classList.add('animating');
+
                         const capturedPiece = toSquare.querySelector('.chess-piece');
-                        if (capturedPiece) capturedPiece.remove();
+
+                        const startRect = piece.getBoundingClientRect();
 
                         toSquare.appendChild(piece);
                         piece.dataset.row = toRow;
                         piece.dataset.col = toCol;
-                        resetPiecePosition(piece);
+
+                        piece.style.transform = '';
+                        piece.style.transition = '';
+
+                        const endRect = piece.getBoundingClientRect();
+
+                        let deltaX = startRect.left - endRect.left;
+                        let deltaY = startRect.top - endRect.top;
+
+                        // Include rotation if the board is flipped
+                        const rotation = isBoardFlipped ? 'rotate(180deg)' : '';
+
+                        // Adjust deltaX and deltaY when board is flipped
+                        if (isBoardFlipped) {
+                            deltaX *= -1;
+                            deltaY *= -1;
+                        }
+
+                        // Apply the transform: translate first, then rotate
+                        piece.style.transform = `translate(${deltaX}px, ${deltaY}px) ${rotation}`;
+
+                        piece.offsetWidth;
+
+                        piece.style.transition = `transform var(--piece-transition-duration) var(--piece-transition-timing)`;
+
+                        // Remove the translation but keep rotation
+                        piece.style.transform = rotation;
+
+                        piece.addEventListener('transitionend', function handleTransitionEnd(event) {
+                            if (event.propertyName === 'transform') {
+                                piece.removeEventListener('transitionend', handleTransitionEnd);
+                                piece.style.pointerEvents = '';
+                                // Reset transform and transition properties
+                                piece.style.transform = '';
+                                piece.style.transition = '';
+                            }
+                        });
+
+                        if (capturedPiece) {
+                            // Delay the removal of the captured piece until after the animation
+                            setTimeout(() => {
+                                capturedPiece.remove();
+                            }, parseFloat(getComputedStyle(piece).getPropertyValue('--piece-transition-duration')) * 1000);
+                            // Add capture highlight class
+                            toSquare.classList.add('capture-highlight');
+                        } else {
+                            // Add move highlight class
+                            toSquare.classList.add('move-highlight');
+                        }
+
+                        // Highlight the fromSquare
+                        fromSquare.classList.add('move-highlight');
 
                         // Handle special moves
                         if (data.aiIsPromotion) {
-                            promotePawn(piece);
+                            // Delay promotion until after the animation
+                            setTimeout(() => {
+                                promotePawn(piece);
+                            }, parseFloat(getComputedStyle(piece).getPropertyValue('--piece-transition-duration')) * 1000);
                         }
                         if (data.aiIsEnPassantCapture) {
-                            captureEnPassant(piece, toRow, toCol);
+                            // Delay capture until after the animation
+                            setTimeout(() => {
+                                captureEnPassant(piece, toRow, toCol);
+                            }, parseFloat(getComputedStyle(piece).getPropertyValue('--piece-transition-duration')) * 1000);
                         }
                         if (data.aiIsCastle) {
-                            castleRook(piece, fromRow, fromCol, toCol);
+                            // Delay rook movement until after the animation
+                            setTimeout(() => {
+                                castleRook(piece, fromRow, fromCol, toCol);
+                            }, parseFloat(getComputedStyle(piece).getPropertyValue('--piece-transition-duration')) * 1000);
                         }
 
                         playAIMoveSound(data);
