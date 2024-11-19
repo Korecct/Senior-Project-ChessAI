@@ -946,11 +946,13 @@ button[type="button"],
     border-radius: 10px;
     max-width: 1200px;
     margin: 0 auto;
-    transition: background-color var(--transition-speed);
+    border: 2px solid var(--board-border-color);
+    ransition: background-color var(--transition-speed), border-color var(--transition-speed);
 }
 
 body.dm .rules-container {
     background-color: rgba(85, 85, 85, 0.9); /* Dark mode background */
+    border-color: var(--board-border-color-dark);
 }
 
 /* Rule Section */
@@ -993,10 +995,12 @@ body.dm .rule-text {
 
     .rule-gif img {
         width: 100%;
-        height: auto; 
-        max-height: 300px; 
-        object-fit: contain; 
+        height: auto;
+        max-height: 300px;
+        object-fit: contain;
+        border-radius: 15px;
     }
+
 
 /* Media Queries for Smaller Screens */
 @media (max-width: 1200px) {
