@@ -5,7 +5,8 @@ A modern web-based chess application featuring Online PvP (Player vs. Player), L
 
 ## Features
 
-- **Local PvP Mode**: Play against another player on the same device or network.
+- **Online PvP Mode**: Play against another player on the internet and connect using a generated lobby code.
+- **Local PvP Mode**: Play against another player on the same device.
 - **PvAI Mode**: Challenge the AI and test your skills against dynamically loaded chess AI models.
 - **Dynamic AI Integration**: Easily load and integrate custom AI models into the application.
 - **Real-Time Gameplay**: Powered by SignalR, enabling smooth and responsive interactions.
