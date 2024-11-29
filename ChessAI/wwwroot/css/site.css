@@ -250,19 +250,19 @@ body.dm .chess-board {
     will-change: background-color;
 }
 
-    .chess-square.black {
+    .chess-square.white {
         background-color: #a16868;
     }
 
-    .chess-square.white {
+    .chess-square.black {
         background-color: #a290ff;
     }
 
-body.dm .chess-square.black {
+body.dm .chess-square.white {
     background-color: #4c3838;
 }
 
-body.dm .chess-square.white {
+body.dm .chess-square.black {
     background-color: #bdbdbd;
 }
 
